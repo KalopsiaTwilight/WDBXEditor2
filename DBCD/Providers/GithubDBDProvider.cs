@@ -6,7 +6,7 @@ namespace DBCD.Providers
 {
     public class GithubDBDProvider : IDBDProvider
     {
-        private static Uri BaseURI = new Uri("https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/");
+        private static Uri BaseURI = new Uri("http://127.0.0.1/definitions/");
         private HttpClient client = new HttpClient();
 
         public GithubDBDProvider()
