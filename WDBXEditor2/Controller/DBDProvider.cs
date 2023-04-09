@@ -7,7 +7,7 @@ namespace WDBXEditor2.Controller
 {
     public class DBDProvider : IDBDProvider
     {
-        private static Uri BaseURI = new Uri("https://raw.githubusercontent.com/wowdev/WoWDBDefs/master/definitions/");
+        private static Uri BaseURI = new Uri("http://127.0.0.1/definitions/");
         private static string CachePath = "Cache/";
         private HttpClient client = new HttpClient();
 
