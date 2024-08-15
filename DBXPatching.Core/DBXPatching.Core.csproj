@@ -6,7 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+
 	<ItemGroup>
-		<ProjectReference Include="..\DBCD\DBCD.csproj" />
+		<PackageReference Include="DBCD" Version="2.0.0" />
 	</ItemGroup>
 </Project>

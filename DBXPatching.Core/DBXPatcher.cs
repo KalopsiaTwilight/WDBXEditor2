@@ -147,7 +147,7 @@ namespace DBXPatching.Core
                 row = records[instruction.RecordId.Value];
             } else
             {
-                records!.AddEmpty(instruction.RecordId);
+                AddEmptyRow(records!, instruction.RecordId);
                 row = records.Values.LastOrDefault();
             }
 
@@ -163,7 +163,8 @@ namespace DBXPatching.Core
             if (!string.IsNullOrEmpty(instruction.RecordIdReference))
             {
                 row.ID = _referenceIds[instruction.RecordIdReference];
-                row[instruction.Filename, row.GetDynamicMemberNames().First()] = _referenceIds[instruction.RecordIdReference];
+                var idFieldName = row.GetDynamicMemberNames().First();
+                row[idFieldName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), idFieldName, _referenceIds[instruction.RecordIdReference]);
             }
 
             foreach(var generateId in instruction.GenerateIds)
@@ -292,11 +293,11 @@ namespace DBXPatching.Core
                                 }
                                 col.FallBackValue = convertedVal!;
                             }
-                            row[fileName, col.ColumnName] = col.FallBackValue;
+                            row[col.ColumnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), col.ColumnName, col.FallBackValue);
                         }
                         else
                         {
-                            row[fileName, col.ColumnName] = _referenceIds[col.ReferenceId];
+                            row[col.ColumnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), col.ColumnName, _referenceIds[col.ReferenceId]);
                         }
                     }
                     else
@@ -310,7 +311,7 @@ namespace DBXPatching.Core
                             }
                             col.Value = convertedVal!;
                         }
-                        row[fileName, col.ColumnName] = col.Value;
+                        row[col.ColumnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), col.ColumnName, col.Value);
                     }
                 }
                 catch
@@ -373,11 +374,12 @@ namespace DBXPatching.Core
 
         public DBXPatchingOperationResult ConvertJsonToFieldType(JsonElement element, string fileName, string field, out object? resultValue)
         {
-            var fieldInfo = openedFiles[fileName].GetRowType().GetField(field);
+            var underlyingType = openedFiles[fileName].Values.First().GetUnderlyingType();
+            var fieldInfo = underlyingType.GetField(field);
             while (fieldInfo == null && field.Length > 0)
             {
                 field = field.Remove(field.Length - 1);
-                fieldInfo = openedFiles[fileName].GetRowType().GetField(field);
+                fieldInfo = underlyingType.GetField(field);
             }
             if (fieldInfo == null)
             {
@@ -403,6 +405,39 @@ namespace DBXPatching.Core
                 };
             }
             return DBXPatchingOperationResult.Ok;
+        }
+
+
+        private void AddEmptyRow(IDBCDStorage storage, int? id = null)
+        {
+            // Initialization code
+            var lastItem = storage.Values.Last();
+            var row = storage.ConstructRow(id ?? storage.Values.Max(x => x.ID) + 1);
+            var fieldNames = row.GetDynamicMemberNames();
+
+            var underlyingType = storage.GetType().GenericTypeArguments.First();
+            var fields = underlyingType.GetFields();
+            // Array Fields need to be initialized to fill their length
+            var arrayFields = fields.Where(x => x.FieldType.IsArray);
+            foreach (var arrayField in arrayFields)
+            {
+
+                var count = ((Array)lastItem[arrayField.Name]).Length;
+                var rowRecords = new string[count];
+                for (var i = 0; i < count; i++)
+                {
+                    rowRecords.SetValue(Activator.CreateInstance(arrayField.FieldType.GetElementType()!)!.ToString(), i);
+                }
+                row[arrayField.Name] = ConvertHelper.ConvertArray(arrayField.FieldType, count, rowRecords);
+            }
+
+            // String Fields need to be initialized to empty string rather than null;
+            var stringFields = fields.Where(x => x.FieldType == typeof(string));
+            foreach (var stringField in stringFields)
+            {
+                row[stringField.Name] = string.Empty;
+            }
+            storage.Add(row.ID, row);
         }
     }
 }
