@@ -1,14 +1,18 @@
-﻿using DBCD;
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using DBCD;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using WDBXEditor2.Controller;
+using WDBXEditor2.Helpers;
 using WDBXEditor2.Misc;
 using WDBXEditor2.Views;
 
@@ -19,7 +23,7 @@ namespace WDBXEditor2
     /// </summary>
     public partial class MainWindow : Window
     {
-        private DBLoader dbLoader = new DBLoader();
+        private readonly DBLoader dbLoader = new();
         public string CurrentOpenDB2 { get; set; } = string.Empty;
 
         public Dictionary<string, string> OpenedDB2Paths { get; set; } = new Dictionary<string, string>();
@@ -50,7 +54,7 @@ namespace WDBXEditor2
 
                 foreach (string loadedDB in dbLoader.LoadFiles(files))
                 {
-                    OpenedDB2Paths[loadedDB] = files.First(x => Path.GetFileName(x) == loadedDB);
+                    OpenedDB2Paths[loadedDB] = files.First(x => Path.GetFileNameWithoutExtension(x) == loadedDB);
                     OpenDBItems.Items.Add(loadedDB);
                 }
             }
@@ -186,7 +190,7 @@ namespace WDBXEditor2
                     var dbcRow = OpenedDB2Storage.Values.ElementAt(rowIdx);
                     try
                     {
-                        dbcRow[CurrentOpenDB2, e.Column.Header.ToString()] = newVal.Text;
+                        dbcRow[e.Column.Header.ToString()] = newVal.Text;
                     }
                     catch
                     {
@@ -212,7 +216,7 @@ namespace WDBXEditor2
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                dbLoader.LoadedDBFiles[CurrentOpenDB2].Export(saveFileDialog.FileName);
+                ExportToCsv(saveFileDialog.FileName);
             }
         }
 
@@ -230,9 +234,8 @@ namespace WDBXEditor2
 
             if (openFileDialog.ShowDialog() == true)
             {
-                var storage = dbLoader.LoadedDBFiles[CurrentOpenDB2];
                 var fileName = openFileDialog.FileNames[0];
-                storage.Import(fileName);
+                ImportCsv(fileName);
                 ReloadDataView();
             }
         }
@@ -286,15 +289,20 @@ namespace WDBXEditor2
 
         private void Data_RowDeleted(object sender, DataRowChangeEventArgs e)
         {
-            OpenedDB2Storage.RemoveFromStorage(int.Parse(e.Row[0].ToString()));
+            OpenedDB2Storage.Remove(int.Parse(e.Row[0].ToString()));
         }
 
         private void DB2DataGrid_InitializingNewItem(object sender, InitializingNewItemEventArgs e)
         {
             Debug.WriteLine(e.NewItem);
-            var rowIdx = OpenedDB2Storage.Keys.Count;
-            OpenedDB2Storage.AddEmpty();
-            var rowData = OpenedDB2Storage.Values.ElementAt(rowIdx);
+
+            var id = OpenedDB2Storage.Keys.Max() + 1;
+            var rowData = OpenedDB2Storage.ConstructRow(OpenedDB2Storage.Values.Max(x => x.ID));
+            rowData[rowData.GetDynamicMemberNames().First()] = id;
+            rowData.ID = id;
+
+            OpenedDB2Storage.Add(id, rowData);
+
             foreach (string columnName in rowData.GetDynamicMemberNames())
             {
                 var columnValue = rowData[columnName];
@@ -308,6 +316,88 @@ namespace WDBXEditor2
                 }
                 else
                     ((DataRowView)e.NewItem)[columnName] = columnValue;
+            }
+        }
+
+        private void ExportToCsv(string filename)
+        {
+            var firstItem = OpenedDB2Storage.Values.FirstOrDefault();
+            if (firstItem == null)
+            {
+                return;
+            }
+
+            var columnNames = firstItem.GetDynamicMemberNames()
+                .SelectMany(x =>
+                {
+                    var columnData = firstItem[x];
+                    if (columnData.GetType().IsArray)
+                    {
+                        var result = new string[((Array)columnData).Length];
+                        for (int i = 0; i < result.Length; i++)
+                        {
+                            result[i] = x + i;
+                        }
+                        return result;
+                    }
+                    return new[] { x };
+                });
+            using (var fileStream = File.Create(filename))
+            using (var writer = new StreamWriter(fileStream))
+            {
+                writer.WriteLine(string.Join(",", columnNames));
+                using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)
+                {
+                    MemberTypes = CsvHelper.Configuration.MemberTypes.Fields,
+                    HasHeaderRecord = false,
+                    ShouldQuote = (args) =>
+                    {
+                        return args.FieldType == typeof(string);
+                    }
+                }))
+                {
+                    csv.Context.TypeConverterCache.RemoveConverter<byte[]>();
+                    csv.WriteRecords(OpenedDB2Storage.Values);
+                }
+            }
+        }
+
+        private void ImportCsv(string fileName)
+        {
+            using (var reader = new StreamReader(fileName))
+            using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                MemberTypes = CsvHelper.Configuration.MemberTypes.Fields,
+                HasHeaderRecord = true,
+
+            }))
+            {
+                var underlyingType = OpenedDB2Storage.GetType().GenericTypeArguments[0];
+
+                csv.Context.TypeConverterCache.RemoveConverter<byte[]>();
+                var records = csv.GetRecords(underlyingType);
+                OpenedDB2Storage.Clear();
+                foreach (var record in records)
+                {
+                    var id = (int)underlyingType.GetField(OpenedDB2Storage.AvailableColumns.First()).GetValue(record);
+                    var row = OpenedDB2Storage.ConstructRow(id);
+                    var fields = underlyingType.GetFields();
+                    var arrayFields = fields.Where(x => x.FieldType.IsArray);
+                    foreach (var field in fields)
+                    {
+                        if (field.FieldType.IsArray)
+                        {
+                            var count = csv.HeaderRecord.Where(x => x.StartsWith(field.Name)).ToList().Count();
+                            var rowRecords = new string[count];
+                            Array.Copy(csv.Parser.Record, Array.IndexOf(csv.HeaderRecord, field.Name + 0), rowRecords, 0, count);
+                            row[field.Name] = ConvertHelper.ConvertArray(field.FieldType, count, rowRecords);
+                        } else
+                        {
+                            row[field.Name] = field.GetValue(record);
+                        }
+                    }
+                    OpenedDB2Storage.Add(id, row);
+                }
             }
         }
     }

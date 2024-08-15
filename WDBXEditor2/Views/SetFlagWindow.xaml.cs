@@ -1,12 +1,7 @@
-﻿using DBCD;
-using DBDefsLib;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
-using WDBXEditor2.Misc;
-using static DBDefsLib.Structs;
+using WDBXEditor2.Helpers;
 
 namespace WDBXEditor2.Views
 {
@@ -28,18 +23,18 @@ namespace WDBXEditor2.Views
             var bitVal = int.Parse(txtValue.Text);
             foreach (var row in dbcdStorage.Values)
             {
-                var rowVal = (int)row[columnName];
+                var rowVal = Convert.ToInt32(row[columnName]);
                 if (cbUnsetBit.IsChecked ?? false)
                 {
                     if ((rowVal & bitVal) > 0)
                     {
-                        row[_mainWindow.CurrentOpenDB2, columnName] = rowVal - bitVal;
+                        row[columnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), columnName, rowVal - bitVal);
                     }
                 } else
                 {
                     if ((rowVal & bitVal) == 0)
                     {
-                        row[_mainWindow.CurrentOpenDB2, columnName] = rowVal + bitVal;
+                        row[columnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), columnName, rowVal + bitVal);
                     }
 
                 }

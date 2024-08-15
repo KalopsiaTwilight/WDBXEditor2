@@ -1,12 +1,6 @@
-﻿using DBCD;
-using DBDefsLib;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
-using WDBXEditor2.Misc;
-using static DBDefsLib.Structs;
+using WDBXEditor2.Helpers;
 
 namespace WDBXEditor2.Views
 {
@@ -29,7 +23,7 @@ namespace WDBXEditor2.Views
             {
                 if (row[columnName].ToString() == txtValueReplace.Text)
                 {
-                    row[_mainWindow.CurrentOpenDB2, columnName] = txtValue.Text;
+                    row[columnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), columnName, txtValue.Text);
                 }
             }
             _mainWindow.ReloadDataView();

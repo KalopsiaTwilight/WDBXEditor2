@@ -5,20 +5,17 @@
     <TargetFramework>net70-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+	<Version>0.0.10</Version>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\DBCD\DBCD.csproj">
-      <Private>true</Private>
-    </ProjectReference>
-  </ItemGroup>
 
   <ItemGroup>
     <None Remove="Assets\icon.ico" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+	 <PackageReference Include="CsvHelper" Version="33.0.1" />
+    <PackageReference Include="DBCD" Version="2.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>
