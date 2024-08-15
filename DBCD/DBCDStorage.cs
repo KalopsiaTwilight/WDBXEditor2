@@ -100,7 +100,6 @@ namespace DBCD
         DBCDInfo GetDBCDInfo();
         Dictionary<ulong, int> GetEncryptedSections();
         void Save(string filename);
-        void Export(string fileName);
         void Import(string fileName);
         void AddEmpty(int? id = null);
         void RemoveFromStorage(int key);
@@ -205,48 +204,7 @@ namespace DBCD
         }
 
 
-        public void Export(string filename)
-        {
-            var firstItem = Values.FirstOrDefault();
-            if (firstItem == null)
-            {
-                return;
-            }
-
-            var columnNames = firstItem.GetDynamicMemberNames()
-                .SelectMany(x =>
-                {
-                    var columnData = firstItem[x];
-                    if (columnData.GetType().IsArray)
-                    {
-                        var result = new string[((Array)columnData).Length];
-                        for (int i = 0; i < result.Length; i++)
-                        {
-                            result[i] = x + i;
-                        }
-                        return result;
-                    }
-                    return new[] { x };
-                });
-            using (var fileStream = File.Create(filename))
-            using (var writer = new StreamWriter(fileStream))
-            {
-                writer.WriteLine(string.Join(",", columnNames));
-                using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)
-                {
-                    MemberTypes = MemberTypes.Fields,
-                    HasHeaderRecord = false,
-                    ShouldQuote = (args) =>
-                    {
-                        return args.FieldType == typeof(string);
-                    }
-                }))
-                {
-                    csv.Context.TypeConverterCache.RemoveConverter<byte[]>();
-                    csv.WriteRecords(db2Storage.Values);
-                }
-            }
-        }
+      
 
         public void AddEmpty(int? id = null)
         {

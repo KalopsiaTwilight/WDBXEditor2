@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using WDBXEditor2.Helpers;
 using WDBXEditor2.Misc;
 using static DBDefsLib.Structs;
 
@@ -33,7 +34,7 @@ namespace WDBXEditor2.Views
             {
                 if (row[columnName].ToString() == txtPrimaryValue.Text)
                 {
-                    row[_mainWindow.CurrentOpenDB2, foreignColumnName] = txtForeignValue.Text;
+                    row[foreignColumnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), foreignColumnName, txtForeignValue.Text);
                 }
             }
             _mainWindow.ReloadDataView();

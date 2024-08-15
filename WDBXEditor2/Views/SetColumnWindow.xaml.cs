@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using WDBXEditor2.Helpers;
 using WDBXEditor2.Misc;
 using static DBDefsLib.Structs;
 
@@ -27,7 +28,7 @@ namespace WDBXEditor2.Views
             var columnName = ddlColumnName.SelectedValue.ToString();
             foreach (var row in dbcdStorage.Values)
             {
-                row[_mainWindow.CurrentOpenDB2, columnName] = txtValue.Text;
+                row[columnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), columnName, txtValue.Text); ;
             }
             _mainWindow.ReloadDataView();
             Close();
