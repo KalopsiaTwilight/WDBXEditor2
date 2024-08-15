@@ -293,16 +293,20 @@ namespace WDBXEditor2
 
         private void Data_RowDeleted(object sender, DataRowChangeEventArgs e)
         {
-            // TODO: Replace this with a DBCDStorage.Remove call once supported.
-            OpenedDB2Storage.ToDictionary().Remove(int.Parse(e.Row[0].ToString()));
+            OpenedDB2Storage.Remove(int.Parse(e.Row[0].ToString()));
         }
 
         private void DB2DataGrid_InitializingNewItem(object sender, InitializingNewItemEventArgs e)
         {
             Debug.WriteLine(e.NewItem);
-            var rowIdx = OpenedDB2Storage.Keys.Count;
-            AddEmptyRow();
-            var rowData = OpenedDB2Storage.Values.ElementAt(rowIdx);
+
+            var id = OpenedDB2Storage.Keys.Max() + 1;
+            var rowData = OpenedDB2Storage.ConstructRow(OpenedDB2Storage.Values.Max(x => x.ID));
+            rowData[rowData.GetDynamicMemberNames().First()] = id;
+            rowData.ID = id;
+
+            OpenedDB2Storage.Add(id, rowData);
+
             foreach (string columnName in rowData.GetDynamicMemberNames())
             {
                 var columnValue = rowData[columnName];
@@ -376,8 +380,7 @@ namespace WDBXEditor2
 
                 csv.Context.TypeConverterCache.RemoveConverter<byte[]>();
                 var records = csv.GetRecords(underlyingType);
-                // TODO: Replace this with a DBCDStorage.Clear call once supported.
-                OpenedDB2Storage.ToDictionary().Clear();
+                OpenedDB2Storage.Clear();
                 foreach (var record in records)
                 {
                     var id = (int)underlyingType.GetField(OpenedDB2Storage.AvailableColumns.First()).GetValue(record);
@@ -400,45 +403,6 @@ namespace WDBXEditor2
                     OpenedDB2Storage.Add(id, row);
                 }
             }
-        }
-
-        private void AddEmptyRow(int? id = null)
-        {
-
-            // Initialization code
-
-            var lastItem = OpenedDB2Storage.Values.LastOrDefault();
-            if (lastItem == null)
-            {
-                // TODO: Throw Error
-            }
-
-            var row = OpenedDB2Storage.ConstructRow(id ?? OpenedDB2Storage.Values.Max(x => x.ID) + 1);
-            var fieldNames = row.GetDynamicMemberNames();
-
-            var underlyingType = OpenedDB2Storage.GetType().GenericTypeArguments[0];
-            var fields = underlyingType.GetFields();
-            // Array Fields need to be initialized to fill their length
-            var arrayFields = fields.Where(x => x.FieldType.IsArray);
-            foreach (var arrayField in arrayFields)
-            {
-
-                var count = ((Array)lastItem[arrayField.Name]).Length;
-                var rowRecords = new string[count];
-                for (var i = 0; i < count; i++)
-                {
-                    rowRecords[i] = Activator.CreateInstance(arrayField.FieldType.GetElementType()).ToString();
-                }
-                row[arrayField.Name] = ConvertHelper.ConvertArray(arrayField.FieldType, count, rowRecords);
-            }
-
-            // String Fields need to be initialized to empty string rather than null;
-            var stringFields = fields.Where(x => x.FieldType == typeof(string));
-            foreach (var stringField in stringFields)
-            {
-                row[stringField.Name] = string.Empty;
-            }
-            OpenedDB2Storage.Add(row.ID, row);
         }
     }
 }
