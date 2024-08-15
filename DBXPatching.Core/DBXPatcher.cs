@@ -1,6 +1,5 @@
 ﻿using DBCD;
-using DBDefsLib;
-using DBXPatching.Core.Infrastructure;
+using DBCD.Providers;
 using System.Text.Json;
 
 namespace DBXPatching.Core
@@ -37,8 +36,8 @@ namespace DBXPatching.Core
         public string DBCInputDirectory { get; set; }
         public string DBCOutputDirectory { get; set; }
 
-        private readonly DBDProvider _dbdProvider;
-        private readonly DBCProvider _dbcProvider;
+        private readonly IDBDProvider _dbdProvider;
+        private readonly IDBCProvider _dbcProvider;
         private readonly DBCD.DBCD _dbcd;
 
         private readonly Dictionary<string, IDBCDStorage> openedFiles;
@@ -56,8 +55,8 @@ namespace DBXPatching.Core
             _referenceIds = [];
             _modifiedFiles = [];
 
-            _dbdProvider = new DBDProvider();
-            _dbcProvider = new DBCProvider();
+            _dbdProvider = new GithubDBDProvider();
+            _dbcProvider = new FilesystemDBCProvider(inputDir);
             _dbcd = new DBCD.DBCD(_dbcProvider, _dbdProvider);
         }
 
@@ -344,10 +343,6 @@ namespace DBXPatching.Core
                     ResultCode = PatchingResultCode.ERROR_DB2_FILE_DOES_NOT_EXIST
                 };
             }
-
-            var dbdStream = _dbdProvider.StreamForTableName(db2Path);
-            var dbdReader = new DBDReader();
-            var databaseDefinition = dbdReader.Read(dbdStream);
 
             storage = _dbcd.Load(db2Path, "9.2.7.45745", Locale.EnUS);
             openedFiles[db2Name] = storage;

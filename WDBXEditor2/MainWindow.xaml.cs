@@ -1,18 +1,14 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
 using DBCD;
-using DBDefsLib;
 using Microsoft.Win32;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
-using System.Formats.Asn1;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using WDBXEditor2.Controller;
@@ -27,7 +23,7 @@ namespace WDBXEditor2
     /// </summary>
     public partial class MainWindow : Window
     {
-        private DBLoader dbLoader = new DBLoader();
+        private readonly DBLoader dbLoader = new();
         public string CurrentOpenDB2 { get; set; } = string.Empty;
 
         public Dictionary<string, string> OpenedDB2Paths { get; set; } = new Dictionary<string, string>();
@@ -58,7 +54,7 @@ namespace WDBXEditor2
 
                 foreach (string loadedDB in dbLoader.LoadFiles(files))
                 {
-                    OpenedDB2Paths[loadedDB] = files.First(x => Path.GetFileName(x) == loadedDB);
+                    OpenedDB2Paths[loadedDB] = files.First(x => Path.GetFileNameWithoutExtension(x) == loadedDB);
                     OpenDBItems.Items.Add(loadedDB);
                 }
             }
@@ -220,7 +216,7 @@ namespace WDBXEditor2
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                ExportDb2(saveFileDialog.FileName);
+                ExportToCsv(saveFileDialog.FileName);
             }
         }
 
@@ -323,7 +319,7 @@ namespace WDBXEditor2
             }
         }
 
-        private void ExportDb2(string filename)
+        private void ExportToCsv(string filename)
         {
             var firstItem = OpenedDB2Storage.Values.FirstOrDefault();
             if (firstItem == null)

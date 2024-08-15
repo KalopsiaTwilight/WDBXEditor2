@@ -1,4 +1,5 @@
 ﻿using DBCD;
+using DBCD.Providers;
 using DBDefsLib;
 using System;
 using System.Collections.Concurrent;
@@ -15,40 +16,37 @@ namespace WDBXEditor2.Controller
     {
         public ConcurrentDictionary<string, IDBCDStorage> LoadedDBFiles;
 
-        private readonly DBDProvider dbdProvider;
-        private readonly DBCProvider dbcProvider;
+        private readonly IDBDProvider dbdProvider;
 
         public DBLoader()
         {
-            dbdProvider = new DBDProvider();
-            dbcProvider = new DBCProvider();
-
+            dbdProvider = new GithubDBDProvider();
             LoadedDBFiles = new ConcurrentDictionary<string, IDBCDStorage>();
         }
 
         public string[] LoadFiles(string[] files)
         {
             var loadedFiles = new List<string>();
-            var dbcd = new DBCD.DBCD(dbcProvider, dbdProvider);
             Stopwatch stopWatch = null;
-
 
             foreach (string db2Path in files)
             {
-                string db2Name = Path.GetFileName(db2Path);
+                string db2Name = Path.GetFileNameWithoutExtension(db2Path);
 
                 try
                 {
-                    DefinitionSelect definitionSelect = new DefinitionSelect();
+                    DefinitionSelect definitionSelect = new();
                     definitionSelect.SetDB2Name(db2Name);
-                    definitionSelect.SetDefinitionFromVersionDefinitions(GetVersionDefinitionsForDB2(db2Path));
+                    definitionSelect.SetDefinitionFromVersionDefinitions(GetVersionDefinitionsForDB2(db2Name));
                     definitionSelect.ShowDialog();
+
+                    var dbcd = new DBCD.DBCD(new FilesystemDBCProvider(Path.GetDirectoryName(db2Path)), dbdProvider);
 
                     if (definitionSelect.IsCanceled)
                         continue;
 
                     stopWatch = new Stopwatch();
-                    var storage = dbcd.Load(db2Path, definitionSelect.SelectedVersion, definitionSelect.SelectedLocale);
+                    var storage = dbcd.Load(db2Name, definitionSelect.SelectedVersion, definitionSelect.SelectedLocale);
 
                     if (LoadedDBFiles.ContainsKey(db2Name))
                     {

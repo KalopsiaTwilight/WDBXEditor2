@@ -1,7 +1,9 @@
-﻿namespace WDBXEditor2
+﻿using System.Reflection;
+
+namespace WDBXEditor2
 {
     public static class Constants
     {
-        public const string Version = "v0.0.8";
+        public static string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString();
     }
 }
