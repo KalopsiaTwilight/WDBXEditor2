@@ -302,12 +302,12 @@ namespace WDBXEditor2
         {
             Debug.WriteLine(e.NewItem);
 
-            var id = OpenedDB2Storage.Keys.Max() + 1;
-            var rowData = OpenedDB2Storage.ConstructRow(OpenedDB2Storage.Values.Max(x => x.ID));
+            var id = OpenedDB2Storage.Keys.Count > 0 ? OpenedDB2Storage.Keys.Max() + 1 : 1;
+            var rowData = OpenedDB2Storage.ConstructRow(id);
             rowData[rowData.GetDynamicMemberNames().First()] = id;
             rowData.ID = id;
 
-            OpenedDB2Storage.Add(id, rowData);
+            OpenedDB2Storage[id] = rowData;
 
             foreach (string columnName in rowData.GetDynamicMemberNames())
             {
