@@ -188,13 +188,19 @@ namespace WDBXEditor2
                     var newVal = e.EditingElement as TextBox;
 
                     var dbcRow = OpenedDB2Storage.Values.ElementAt(rowIdx);
+                    var colName = e.Column.Header.ToString();
                     try
                     {
-                        dbcRow[e.Column.Header.ToString()] = newVal.Text;
+                        dbcRow[colName] = ConvertHelper.ConvertValue(dbcRow.GetUnderlyingType(), colName, newVal.Text);
                     }
-                    catch
+                    catch(Exception exc)
                     {
-                        newVal.Text = dbcRow[e.Column.Header.ToString()].ToString();
+                        newVal.Text = dbcRow[colName].ToString();
+                        var exceptionWindow = new ExceptionWindow();
+                        var fieldType = ConvertHelper.GetFieldType(dbcRow.GetUnderlyingType(), colName);
+
+                        exceptionWindow.DisplayException(exc.InnerException ?? exc, $"An error occured setting this value for this cell. This is likely due to an invalid value for conversion to '{fieldType.Name}':");
+                        exceptionWindow.Show();
                     }
 
                     Console.WriteLine($"RowIdx: {rowIdx} Text: {newVal.Text}");

@@ -11,10 +11,11 @@ namespace WDBXEditor2.Views
             InitializeComponent();
         }
 
-        public void DisplayException(Exception e)
+        public void DisplayException(Exception e, string label = null)
         {
             CaughtException = e;
             TxtException.Text = e.ToString();
+            TxtLabel.Text = label ?? "The application encountered an unexpected error performing this action. For details see below.";
         }
     }
 }
