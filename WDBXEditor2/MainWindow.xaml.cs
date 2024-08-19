@@ -197,6 +197,12 @@ namespace WDBXEditor2
                     try
                     {
                         dbcRow[colName] = ConvertHelper.ConvertValue(dbcRow.GetUnderlyingType(), colName, newVal.Text);
+                        if (colName == dbcRow.GetDynamicMemberNames().FirstOrDefault())
+                        {
+                            OpenedDB2Storage.Remove(dbcRow.ID);
+                            dbcRow.ID = Convert.ToInt32(dbcRow[colName]);
+                            OpenedDB2Storage.Add(dbcRow.ID, dbcRow);
+                        }
                     }
                     catch(Exception exc)
                     {
