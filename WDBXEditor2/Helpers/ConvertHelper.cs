@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 
 namespace WDBXEditor2.Helpers
@@ -27,6 +28,11 @@ namespace WDBXEditor2.Helpers
 
         public static object ConvertValue (Type type, string fieldName, object value)
         {
+            return Convert.ChangeType(value, GetFieldType(type, fieldName));
+        }
+
+        public static Type GetFieldType(Type type, string fieldName)
+        {
             var field = type.GetField(fieldName);
             if (field == null)
             {
@@ -39,11 +45,11 @@ namespace WDBXEditor2.Helpers
                     n *= 10;
                 }
                 field = type.GetField(fieldName);
-                return Convert.ChangeType(value, field.FieldType.GetElementType());
+                return field.FieldType.GetElementType();
             }
             else
             {
-                return Convert.ChangeType(value, field.FieldType);
+                return field.FieldType;
             }
         }
 

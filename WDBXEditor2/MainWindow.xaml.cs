@@ -4,6 +4,7 @@ using DBCD;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Data;
 using System.Diagnostics;
 using System.Globalization;
@@ -28,6 +29,8 @@ namespace WDBXEditor2
 
         public Dictionary<string, string> OpenedDB2Paths { get; set; } = new Dictionary<string, string>();
         public IDBCDStorage OpenedDB2Storage { get; set; }
+
+        private List<DBCDRow> _currentOrderedRows = new();
 
         public MainWindow()
         {
@@ -74,6 +77,7 @@ namespace WDBXEditor2
             {
                 Title = $"WDBXEditor2  -  {Constants.Version}  -  {CurrentOpenDB2}";
                 OpenedDB2Storage = storage;
+                _currentOrderedRows = storage.ToDictionary().OrderBy(x => x.Key).Select(x => x.Value).ToList();
                 ReloadDataView();
             }
 
@@ -147,6 +151,7 @@ namespace WDBXEditor2
 
             CurrentOpenDB2 = string.Empty;
             OpenedDB2Storage = null;
+            _currentOrderedRows = null;
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -187,14 +192,20 @@ namespace WDBXEditor2
                     var rowIdx = e.Row.GetIndex();
                     var newVal = e.EditingElement as TextBox;
 
-                    var dbcRow = OpenedDB2Storage.Values.ElementAt(rowIdx);
+                    var dbcRow = _currentOrderedRows.ElementAt(rowIdx);
+                    var colName = e.Column.Header.ToString();
                     try
                     {
-                        dbcRow[e.Column.Header.ToString()] = newVal.Text;
+                        dbcRow[colName] = ConvertHelper.ConvertValue(dbcRow.GetUnderlyingType(), colName, newVal.Text);
                     }
-                    catch
+                    catch(Exception exc)
                     {
-                        newVal.Text = dbcRow[e.Column.Header.ToString()].ToString();
+                        newVal.Text = dbcRow[colName].ToString();
+                        var exceptionWindow = new ExceptionWindow();
+                        var fieldType = ConvertHelper.GetFieldType(dbcRow.GetUnderlyingType(), colName);
+
+                        exceptionWindow.DisplayException(exc.InnerException ?? exc, $"An error occured setting this value for this cell. This is likely due to an invalid value for conversion to '{fieldType.Name}':");
+                        exceptionWindow.Show();
                     }
 
                     Console.WriteLine($"RowIdx: {rowIdx} Text: {newVal.Text}");
@@ -289,19 +300,22 @@ namespace WDBXEditor2
 
         private void Data_RowDeleted(object sender, DataRowChangeEventArgs e)
         {
-            OpenedDB2Storage.Remove(int.Parse(e.Row[0].ToString()));
+            var rowId = int.Parse(e.Row[0].ToString());
+            _currentOrderedRows.Remove(OpenedDB2Storage[rowId]);
+            OpenedDB2Storage.Remove(rowId);
         }
 
         private void DB2DataGrid_InitializingNewItem(object sender, InitializingNewItemEventArgs e)
         {
             Debug.WriteLine(e.NewItem);
 
-            var id = OpenedDB2Storage.Keys.Max() + 1;
-            var rowData = OpenedDB2Storage.ConstructRow(OpenedDB2Storage.Values.Max(x => x.ID));
+            var id = OpenedDB2Storage.Keys.Count > 0 ? OpenedDB2Storage.Keys.Max() + 1 : 1;
+            var rowData = OpenedDB2Storage.ConstructRow(id);
             rowData[rowData.GetDynamicMemberNames().First()] = id;
             rowData.ID = id;
 
-            OpenedDB2Storage.Add(id, rowData);
+            OpenedDB2Storage[id] = rowData;
+            _currentOrderedRows.Insert(_currentOrderedRows.Count, rowData);
 
             foreach (string columnName in rowData.GetDynamicMemberNames())
             {

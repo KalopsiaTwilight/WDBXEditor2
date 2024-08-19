@@ -11,7 +11,7 @@
             <ColumnDefinition Width="53*"/>
             <ColumnDefinition Width="36*"/>
         </Grid.ColumnDefinitions>
-        <TextBlock TextWrapping="WrapWithOverflow" Grid.ColumnSpan="2">The application encountered an unexpected error performing this action. For details see below.</TextBlock>
+        <TextBlock Name="TxtLabel" TextWrapping="WrapWithOverflow" Grid.ColumnSpan="2">The application encountered an unexpected error performing this action. For details see below.</TextBlock>
         <TextBox 
             Name="TxtException" 
             TextWrapping="WrapWithOverflow" 
