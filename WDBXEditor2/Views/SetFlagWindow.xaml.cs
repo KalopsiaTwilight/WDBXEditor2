@@ -28,13 +28,13 @@ namespace WDBXEditor2.Views
                 {
                     if ((rowVal & bitVal) > 0)
                     {
-                        row[columnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), columnName, rowVal - bitVal);
+                        DBCDRowHelper.SetDBCRowColumn(row, columnName, rowVal - bitVal);
                     }
                 } else
                 {
                     if ((rowVal & bitVal) == 0)
                     {
-                        row[columnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), columnName, rowVal + bitVal);
+                        DBCDRowHelper.SetDBCRowColumn(row, columnName, rowVal + bitVal);
                     }
 
                 }

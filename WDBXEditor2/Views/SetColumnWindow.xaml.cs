@@ -21,7 +21,7 @@ namespace WDBXEditor2.Views
             var columnName = ddlColumnName.SelectedValue.ToString();
             foreach (var row in dbcdStorage.Values)
             {
-                row[columnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), columnName, txtValue.Text); ;
+                DBCDRowHelper.SetDBCRowColumn(row, columnName, txtValue.Text);
             }
             _mainWindow.ReloadDataView();
             Close();

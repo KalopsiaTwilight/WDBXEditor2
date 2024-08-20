@@ -27,7 +27,7 @@ namespace WDBXEditor2.Views
             {
                 if (row[columnName].ToString() == txtPrimaryValue.Text)
                 {
-                    row[foreignColumnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), foreignColumnName, txtForeignValue.Text);
+                    DBCDRowHelper.SetDBCRowColumn(row, foreignColumnName, txtForeignValue.Text);
                 }
             }
             _mainWindow.ReloadDataView();

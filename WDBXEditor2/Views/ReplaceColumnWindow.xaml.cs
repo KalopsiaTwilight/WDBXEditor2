@@ -23,7 +23,7 @@ namespace WDBXEditor2.Views
             {
                 if (row[columnName].ToString() == txtValueReplace.Text)
                 {
-                    row[columnName] = ConvertHelper.ConvertValue(row.GetUnderlyingType(), columnName, txtValue.Text);
+                    DBCDRowHelper.SetDBCRowColumn(row, columnName, txtValue.Text);
                 }
             }
             _mainWindow.ReloadDataView();

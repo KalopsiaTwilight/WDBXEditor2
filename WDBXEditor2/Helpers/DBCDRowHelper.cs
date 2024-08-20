@@ -1,10 +1,13 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using DBCD;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO.Packaging;
+using System.Reflection;
 
 namespace WDBXEditor2.Helpers
 {
-    internal class ConvertHelper
+    internal class DBCDRowHelper
     {
         private static Dictionary<Type, Func<int, string[], object>> _arrayConverters = new Dictionary<Type, Func<int, string[], object>>()
         {
@@ -26,31 +29,53 @@ namespace WDBXEditor2.Helpers
             return _arrayConverters[type](size, records);
         }
 
-        public static object ConvertValue (Type type, string fieldName, object value)
+        public static void SetDBCRowColumn(DBCDRow row, string colName, object value)
         {
-            return Convert.ChangeType(value, GetFieldType(type, fieldName));
+            var fieldName = GetUnderlyingFieldName(row.GetUnderlyingType(), colName, out var arrayIndex);
+            var field = row.GetUnderlyingType().GetField(fieldName);
+            if (field.FieldType.IsArray)
+            {
+                ((Array)row[fieldName]).SetValue(Convert.ChangeType(value, field.FieldType.GetElementType()), arrayIndex);
+            } else
+            {
+                row[fieldName] = Convert.ChangeType(value, field.FieldType);
+            }
         }
 
-        public static Type GetFieldType(Type type, string fieldName)
+        public static object GetDBCRowColumn(DBCDRow row, string colName)
         {
-            var field = type.GetField(fieldName);
-            if (field == null)
+            var fieldName = GetUnderlyingFieldName(row.GetUnderlyingType(), colName, out var arrayIndex);
+            var field = row.GetUnderlyingType().GetField(fieldName);
+            if (field.FieldType.IsArray)
             {
-                var index = 0;
-                var n = 1;
-                while (int.TryParse(fieldName[^1].ToString(), out var indexN))
-                {
-                    fieldName = fieldName.Substring(0, fieldName.Length - 1);
-                    index += n * indexN;
-                    n *= 10;
-                }
-                field = type.GetField(fieldName);
+                return ((Array)row[fieldName]).GetValue(arrayIndex);
+            } else
+            {
+                return row[fieldName];
+            }
+        }
+
+        public static Type GetFieldType(DBCDRow row, string fieldName)
+        {
+            var field = row.GetUnderlyingType().GetField(GetUnderlyingFieldName(row.GetUnderlyingType(), fieldName, out _));
+            if (field.FieldType.IsArray)
+            {
                 return field.FieldType.GetElementType();
             }
-            else
+            return field.FieldType;
+        }
+
+        private static string GetUnderlyingFieldName(Type type, string fieldName, out int index)
+        {
+            index = 0;
+            var n = 1;
+            while (int.TryParse(fieldName[^1].ToString(), out var indexN))
             {
-                return field.FieldType;
+                fieldName = fieldName.Substring(0, fieldName.Length - 1);
+                index += n * indexN;
+                n *= 10;
             }
+            return fieldName;
         }
 
 

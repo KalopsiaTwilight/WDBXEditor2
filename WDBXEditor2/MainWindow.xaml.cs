@@ -1,4 +1,4 @@
-using CsvHelper;
+﻿using CsvHelper;
 using CsvHelper.Configuration;
 using DBCD;
 using Microsoft.Win32;
@@ -196,7 +196,7 @@ namespace WDBXEditor2
                     var colName = e.Column.Header.ToString();
                     try
                     {
-                        dbcRow[colName] = ConvertHelper.ConvertValue(dbcRow.GetUnderlyingType(), colName, newVal.Text);
+                        DBCDRowHelper.SetDBCRowColumn(dbcRow, colName, newVal.Text);
                         if (colName == dbcRow.GetDynamicMemberNames().FirstOrDefault())
                         {
                             OpenedDB2Storage.Remove(dbcRow.ID);
@@ -206,9 +206,9 @@ namespace WDBXEditor2
                     }
                     catch(Exception exc)
                     {
-                        newVal.Text = dbcRow[colName].ToString();
+                        newVal.Text = DBCDRowHelper.GetDBCRowColumn(dbcRow, colName).ToString();
                         var exceptionWindow = new ExceptionWindow();
-                        var fieldType = ConvertHelper.GetFieldType(dbcRow.GetUnderlyingType(), colName);
+                        var fieldType = DBCDRowHelper.GetFieldType(dbcRow, colName);
 
                         exceptionWindow.DisplayException(exc.InnerException ?? exc, $"An error occured setting this value for this cell. This is likely due to an invalid value for conversion to '{fieldType.Name}':");
                         exceptionWindow.Show();
