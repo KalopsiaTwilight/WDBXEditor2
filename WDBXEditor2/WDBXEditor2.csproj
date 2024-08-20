@@ -5,7 +5,7 @@
     <TargetFramework>net70-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
-	<Version>0.0.12</Version>
+	<Version>0.0.13</Version>
   </PropertyGroup>
 
   <ItemGroup>
