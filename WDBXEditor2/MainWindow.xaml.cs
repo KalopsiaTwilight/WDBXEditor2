@@ -1,4 +1,4 @@
-﻿using CsvHelper;
+using CsvHelper;
 using CsvHelper.Configuration;
 using DBCD;
 using Microsoft.Win32;
@@ -407,10 +407,10 @@ namespace WDBXEditor2
                     {
                         if (field.FieldType.IsArray)
                         {
-                            var count = csv.HeaderRecord.Where(x => x.StartsWith(field.Name)).ToList().Count();
+                            var count = csv.HeaderRecord.Where(x => x.StartsWith(field.Name) && int.TryParse(x.Substring(field.Name.Length), out int _)).ToList().Count();
                             var rowRecords = new string[count];
                             Array.Copy(csv.Parser.Record, Array.IndexOf(csv.HeaderRecord, field.Name + 0), rowRecords, 0, count);
-                            row[field.Name] = ConvertHelper.ConvertArray(field.FieldType, count, rowRecords);
+                            row[field.Name] = DBCDRowHelper.ConvertArray(field.FieldType, count, rowRecords);
                         } else
                         {
                             row[field.Name] = field.GetValue(record);
