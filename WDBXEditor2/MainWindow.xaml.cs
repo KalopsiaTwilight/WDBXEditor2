@@ -1,10 +1,10 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
 using DBCD;
+using DBCD.IO;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Data;
 using System.Diagnostics;
 using System.Globalization;
@@ -157,7 +157,11 @@ namespace WDBXEditor2
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             if (!string.IsNullOrEmpty(CurrentOpenDB2))
+            {
                 dbLoader.LoadedDBFiles[CurrentOpenDB2].Save(OpenedDB2Paths[CurrentOpenDB2]);
+                dbLoader.ReloadFile(OpenedDB2Paths[CurrentOpenDB2]);
+                ReloadDataView();
+            }
         }
 
         private void SaveAs_Click(object sender, RoutedEventArgs e)
