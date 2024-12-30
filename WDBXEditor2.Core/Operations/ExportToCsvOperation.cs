@@ -45,7 +45,6 @@ namespace WDBXEditor2.Core.Operations
                     request.ProgressReporter?.ReportProgress(progress);
                     csv.WriteRecord(rows.ElementAt(i));
                     await csv.NextRecordAsync();
-                    //awauwriter.Write(Environment.NewLine);
                 }
             }
         }
