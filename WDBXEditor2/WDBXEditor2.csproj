@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net70-windows</TargetFramework>
+    <TargetFramework>net80-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
 	<Version>0.0.14</Version>
@@ -14,8 +14,13 @@
 
   <ItemGroup>
 	 <PackageReference Include="CsvHelper" Version="33.0.1" />
-    <PackageReference Include="DBCD" Version="2.0.3" />
+    <PackageReference Include="DBCD" Version="2.1.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WDBXEditor2.Core\WDBXEditor2.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,13 @@
-﻿using System;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
 using WDBXEditor2.Views;
+using WDBXEditor2.Core.Operations;
+using WDBXEditor2.Misc;
+using DBCD.Providers;
+using WDBXEditor2.Operations;
+using WDBXEditor2.Core;
 
 namespace WDBXEditor2
 {
@@ -10,10 +16,31 @@ namespace WDBXEditor2
     /// </summary>
     public partial class App : Application
     {
+        public IServiceProvider ServiceProvider { get; set; }
+        
+
         protected override void OnStartup(StartupEventArgs e)
         {
-            base.OnStartup(e);
+
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+            ServiceProvider = services.BuildServiceProvider();
+
             SetupExceptionHandling();
+
+            ServiceProvider.GetRequiredService<MainWindow>().Show();
+        }
+
+        private void ConfigureServices(ServiceCollection services)
+        {
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(typeof(ExportToCsvOperation).Assembly, typeof(ReloadDataViewOperation).Assembly));
+            services.AddTransient(typeof(Lazy<>), typeof(LazyResolver<>));
+            services.AddSingleton(typeof(MainWindow));
+            var settingsStorage = new SettingStorage();
+            settingsStorage.Initialize();
+            services.AddSingleton<ISettingsStorage>(settingsStorage);
+            services.AddTransient<IDBDProvider, GithubDBDProvider>();
+            services.AddTransient<IProgressReporter, MainWindowProgressReporter>();
         }
 
         private void SetupExceptionHandling()
@@ -48,6 +75,15 @@ namespace WDBXEditor2
                 });
                 e.SetObserved();
             };
+        }
+
+        internal class LazyResolver<T> : Lazy<T> where T: class
+        {
+            public LazyResolver(IServiceProvider serviceProvider)
+                : base(serviceProvider.GetRequiredService<T>)
+            {
+
+            }
         }
     }
 }

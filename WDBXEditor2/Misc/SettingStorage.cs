@@ -3,11 +3,18 @@ using System.IO;
 
 namespace WDBXEditor2.Misc
 {
-    class SettingStorage
+    public interface ISettingsStorage
     {
-        protected static JsonSettings settings = null;
+        public void Store(string key, string value);
+        public string Get(string key);
+        public void Remove(string key);
+    }
 
-        public static void Initialize()
+    public class SettingStorage: ISettingsStorage
+    {
+        protected JsonSettings settings = null;
+
+        public void Initialize()
         {
             settings = new JsonSettings(Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory,
@@ -15,24 +22,24 @@ namespace WDBXEditor2.Misc
             ));
         }
 
-        public static void Store(string key, string value)
+        public void Store(string key, string value)
         {
             settings[key] = value;
             settings.Save();
         }
 
-        public static string Get(string key)
+        public string Get(string key)
         {
             return settings[key];
         }
 
-        public static void Remove(string key)
+        public void Remove(string key)
         {
             settings.RemoveSetting(key);
             settings.Save();
         }
 
-        public static void Save()
+        public void Save()
         {
             settings.Save();
         }

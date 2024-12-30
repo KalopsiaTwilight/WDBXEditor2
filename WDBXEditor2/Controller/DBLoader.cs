@@ -1,12 +1,14 @@
 ﻿using DBCD;
 using DBCD.Providers;
 using DBDefsLib;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using WDBXEditor2.Misc;
 using WDBXEditor2.Views;
 using static DBDefsLib.Structs;
 
@@ -17,11 +19,13 @@ namespace WDBXEditor2.Controller
         public ConcurrentDictionary<string, IDBCDStorage> LoadedDBFiles;
         private Dictionary<string, (string BuildVersion, Locale Locale)> LoadedDBFileVersions;
 
-        private readonly IDBDProvider dbdProvider;
+        private readonly IDBDProvider _dbdProvider;
+        private readonly IServiceProvider _serviceProvider;
 
-        public DBLoader()
+        public DBLoader(IServiceProvider serviceProvider)
         {
-            dbdProvider = new GithubDBDProvider();
+            _serviceProvider = serviceProvider;
+            _dbdProvider = serviceProvider.GetService<IDBDProvider>();
             LoadedDBFiles = new ConcurrentDictionary<string, IDBCDStorage>();
             LoadedDBFileVersions = new();
         }
@@ -37,12 +41,12 @@ namespace WDBXEditor2.Controller
 
                 try
                 {
-                    DefinitionSelect definitionSelect = new();
+                    DefinitionSelect definitionSelect = ActivatorUtilities.CreateInstance<DefinitionSelect>(_serviceProvider);
                     definitionSelect.SetDB2Name(db2Name);
                     definitionSelect.SetDefinitionFromVersionDefinitions(GetVersionDefinitionsForDB2(db2Name));
                     definitionSelect.ShowDialog();
 
-                    var dbcd = new DBCD.DBCD(new FilesystemDBCProvider(Path.GetDirectoryName(db2Path)), dbdProvider);
+                    var dbcd = new DBCD.DBCD(new FilesystemDBCProvider(Path.GetDirectoryName(db2Path)), _dbdProvider);
 
                     if (definitionSelect.IsCanceled)
                         continue;
@@ -98,7 +102,7 @@ namespace WDBXEditor2.Controller
             }
             var versionInfo = LoadedDBFileVersions[db2Name];
 
-            var dbcd = new DBCD.DBCD(new FilesystemDBCProvider(Path.GetDirectoryName(db2Path)), dbdProvider);
+            var dbcd = new DBCD.DBCD(new FilesystemDBCProvider(Path.GetDirectoryName(db2Path)), _dbdProvider);
             var storage = dbcd.Load(db2Name, versionInfo.BuildVersion, versionInfo.Locale);
 
             LoadedDBFiles[db2Name] = storage;
@@ -106,7 +110,7 @@ namespace WDBXEditor2.Controller
 
         public VersionDefinitions[] GetVersionDefinitionsForDB2(string db2File)
         {
-            var dbdStream = dbdProvider.StreamForTableName(db2File, null);
+            var dbdStream = _dbdProvider.StreamForTableName(db2File, null);
             var dbdReader = new DBDReader();
             var databaseDefinition = dbdReader.Read(dbdStream);
 

@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Windows;
-using WDBXEditor2.Helpers;
+using WDBXEditor2.Core;
 
 namespace WDBXEditor2.Views
 {
@@ -23,7 +23,7 @@ namespace WDBXEditor2.Views
             {
                 if (row[columnName].ToString() == txtValueReplace.Text)
                 {
-                    DBCDRowHelper.SetDBCRowColumn(row, columnName, txtValue.Text);
+                    DBCDHelper.SetDBCRowColumn(row, columnName, txtValue.Text);
                 }
             }
             _mainWindow.ReloadDataView();

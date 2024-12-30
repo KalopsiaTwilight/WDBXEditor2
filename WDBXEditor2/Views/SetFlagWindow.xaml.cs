@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Windows;
-using WDBXEditor2.Helpers;
+using WDBXEditor2.Core;
 
 namespace WDBXEditor2.Views
 {
@@ -28,13 +28,13 @@ namespace WDBXEditor2.Views
                 {
                     if ((rowVal & bitVal) > 0)
                     {
-                        DBCDRowHelper.SetDBCRowColumn(row, columnName, rowVal - bitVal);
+                        DBCDHelper.SetDBCRowColumn(row, columnName, rowVal - bitVal);
                     }
                 } else
                 {
                     if ((rowVal & bitVal) == 0)
                     {
-                        DBCDRowHelper.SetDBCRowColumn(row, columnName, rowVal + bitVal);
+                        DBCDHelper.SetDBCRowColumn(row, columnName, rowVal + bitVal);
                     }
 
                 }

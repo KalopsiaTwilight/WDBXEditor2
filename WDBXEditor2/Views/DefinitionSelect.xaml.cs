@@ -35,14 +35,19 @@ namespace WDBXEditor2.Views
         public string SelectedVersion = null;
         public Locale SelectedLocale = Locale.EnUS;
 
-        public DefinitionSelect()
+        private readonly ISettingsStorage _settings;
+
+        public DefinitionSelect(ISettingsStorage settings)
         {
             InitializeComponent();
+
+            _settings = settings;
+
             DefinitionSelectList.Focus();
             DefinitionSelectList.ItemsSource = definitionSelectData;
             LocaleSelectList.ItemsSource = localeSelectData;
 
-            string lastLocaleSelectedIndexSetting = SettingStorage.Get("LastLocaleSelectedIndex");
+            string lastLocaleSelectedIndexSetting = _settings.Get(Constants.LastLocaleStorageKey);
             if (lastLocaleSelectedIndexSetting != null)
             {
                 int lastLocaleSelectedIndex = int.Parse(lastLocaleSelectedIndexSetting);
@@ -111,7 +116,7 @@ namespace WDBXEditor2.Views
             if (localSelectData.Locale != SelectedLocale)
             {
                 SelectedLocale = localSelectData.Locale;
-                SettingStorage.Store("LastLocaleSelectedIndex", LocaleSelectList.SelectedIndex.ToString());
+                _settings.Store(Constants.LastLocaleStorageKey, LocaleSelectList.SelectedIndex.ToString());
             }
         }
     }
