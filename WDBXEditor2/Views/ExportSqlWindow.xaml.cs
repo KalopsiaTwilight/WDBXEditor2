@@ -3,6 +3,7 @@ using Microsoft.VisualBasic;
 using Microsoft.Win32;
 using System;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -159,7 +160,7 @@ namespace WDBXEditor2.Views
                     writer.WriteLine(",");
                 }
 
-                writer.Write($"  ({string.Join(",", colNames.Select(x => GetSqlValue(row[x])))})");
+                writer.Write($"  ({string.Join(",", colNames.Select(x => GetSqlValue(DBCDRowHelper.GetDBCRowColumn(row, x))))})");
                 processedCount++;
             }
             writer.WriteLine(";");
@@ -175,6 +176,10 @@ namespace WDBXEditor2.Views
             if (val is string txtVal)
             {
                 return "'" + txtVal.Replace("'", "''") + "'";
+            }
+            if (val is float floatVal)
+            {
+                return floatVal.ToString(CultureInfo.InvariantCulture);
             }
 
             return val.ToString();
