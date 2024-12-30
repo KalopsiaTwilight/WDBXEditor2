@@ -33,16 +33,19 @@ namespace WDBXEditor2
             };
             TaskScheduler.UnobservedTaskException += (s, e) =>
             {
-                var exceptionWindow = new ExceptionWindow();
-                if (e.Exception.InnerException != null)
+                Application.Current.Dispatcher.Invoke(() =>
                 {
-                    exceptionWindow.DisplayException(e.Exception.InnerException);
-                }
-                else
-                {
-                    exceptionWindow.DisplayException(e.Exception);
-                }
-                exceptionWindow.Show();
+                    var exceptionWindow = new ExceptionWindow();
+                    if (e.Exception.InnerException != null)
+                    {
+                        exceptionWindow.DisplayException(e.Exception.InnerException);
+                    }
+                    else
+                    {
+                        exceptionWindow.DisplayException(e.Exception);
+                    }
+                    exceptionWindow.Show();
+                });
                 e.SetObserved();
             };
         }
