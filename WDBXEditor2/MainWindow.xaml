@@ -39,8 +39,14 @@
                 <MenuItem Header="Set/Unset _Bit in Column" Click="SetBitColumn_Click"></MenuItem>
                 <MenuItem Header="Set Dependent Column" Click="SetDependentColumn_Click"></MenuItem>
             </MenuItem>
-            <MenuItem Header="_Export" Click="Export_Click"/>
-            <MenuItem Header="_Import" Click="Import_Click"/>
+            <MenuItem Header="E_xport">
+                <MenuItem Header="To _Csv" Click="ExportCsv_Click" />
+                <MenuItem Header="To _Sql" Click="ExportSql_Click" />
+            </MenuItem>
+            <MenuItem Header="_Import">
+                <MenuItem Header="From _Csv" Click="ImportCsv_Click" />
+                <MenuItem Header="From _Sql" Click="ImportSql_Click" />
+            </MenuItem>
         </Menu>
         <Grid Grid.Row="1" Grid.ColumnSpan="2">
             <DataGrid x:Name="DB2DataGrid" Margin="5,5,5,5" Background="#FF939393" CanUserResizeRows="False"

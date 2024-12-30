@@ -1,0 +1,56 @@
+﻿<Window x:Class="WDBXEditor2.Views.ExportSqlWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WDBXEditor2.Views"
+        mc:Ignorable="d"
+        Title="Set Column Value" Height="362" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
+    <Grid Margin="10,0,10,10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="53*"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock TextWrapping="WrapWithOverflow" Height="32" VerticalAlignment="Top">
+            This function will allow you to export data from this table to a SQL File/Database
+        </TextBlock>
+        <TextBlock Margin="0,42,0,0" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Top">
+            Save To
+        </TextBlock>
+        <ComboBox 
+            Name="ddlExportType" 
+            Height="24" 
+            Width="239" 
+            HorizontalAlignment="Left" 
+            VerticalAlignment="Top"
+            Margin="0,68,0,0"
+            SelectionChanged="ddlExportType_SelectionChanged"
+            >
+            <ComboBoxItem Content="File" IsSelected="True" />
+            <ComboBoxItem Content="MySQL Database" />
+        </ComboBox>
+        <TextBlock Margin="0,104,0,0" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Top">
+            Table Name
+        </TextBlock>
+        <ComboBox 
+            Name="ddlTableName" 
+            Height="24" 
+            Width="239" 
+            IsEditable="True"
+            HorizontalAlignment="Left" 
+            VerticalAlignment="Top"
+            Margin="0,128,0,0">
+        </ComboBox>
+
+        <TextBlock Margin="0,0,0, 136" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Bottom">
+            Options
+        </TextBlock>
+        <CheckBox x:Name="cbCreateTable" Margin="0, 0, 0 , 112" Content="Create Table" VerticalAlignment="Bottom" IsChecked="True" />
+        <CheckBox x:Name="cbExportData" Margin="0, 0, 0 , 88" Content="Export Data" VerticalAlignment="Bottom" IsChecked="True"/>
+        <CheckBox x:Name="cbDropTable" Margin="0, 0, 0 , 64" Content="Drop Existing Table" VerticalAlignment="Bottom" />
+
+        <ProgressBar x:Name="pbProgress" Margin="0, 0, 0, 40" VerticalAlignment="Bottom" Height="16" Visibility="Hidden" />
+
+        <Button x:Name="Ok" Width="100" Height="32" HorizontalAlignment="Left" VerticalAlignment="Bottom" Click="Ok_Click">Export</Button>
+        <Button x:Name="Cancel" Width="100" Height="32" HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="Cancel_Click">Cancel</Button>
+    </Grid>
+</Window>

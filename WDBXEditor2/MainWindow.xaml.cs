@@ -223,7 +223,7 @@ namespace WDBXEditor2
             }
         }
 
-        private void Export_Click(object sender, RoutedEventArgs e)
+        private void ExportCsv_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(CurrentOpenDB2))
                 return;
@@ -241,7 +241,7 @@ namespace WDBXEditor2
             }
         }
 
-        private void Import_Click(object sender, RoutedEventArgs e)
+        private void ImportCsv_Click(object sender, RoutedEventArgs e)
         {
             if (string.IsNullOrEmpty(CurrentOpenDB2))
                 return;
@@ -259,6 +259,19 @@ namespace WDBXEditor2
                 ImportCsv(fileName);
                 ReloadDataView();
             }
+        }
+
+        private void ExportSql_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(CurrentOpenDB2))
+                return;
+
+            new ExportSqlWindow(this).Show();
+        }
+        private void ImportSql_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(CurrentOpenDB2))
+                return;
         }
 
         private void SetColumn_Click(object sender, RoutedEventArgs e)
@@ -351,21 +364,7 @@ namespace WDBXEditor2
                 return;
             }
 
-            var columnNames = firstItem.GetDynamicMemberNames()
-                .SelectMany(x =>
-                {
-                    var columnData = firstItem[x];
-                    if (columnData.GetType().IsArray)
-                    {
-                        var result = new string[((Array)columnData).Length];
-                        for (int i = 0; i < result.Length; i++)
-                        {
-                            result[i] = x + i;
-                        }
-                        return result;
-                    }
-                    return new[] { x };
-                });
+            var columnNames = DBCDRowHelper.GetColumnNames(OpenedDB2Storage);
             using (var fileStream = File.Create(filename))
             using (var writer = new StreamWriter(fileStream))
             {

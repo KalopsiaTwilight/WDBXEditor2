@@ -1,9 +1,12 @@
 ﻿using DBCD;
+using DBCD.IO.Attributes;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO.Packaging;
+using System.Linq;
 using System.Reflection;
+using System.Windows.Documents;
 
 namespace WDBXEditor2.Helpers
 {
@@ -11,17 +14,16 @@ namespace WDBXEditor2.Helpers
     {
         private static Dictionary<Type, Func<int, string[], object>> _arrayConverters = new Dictionary<Type, Func<int, string[], object>>()
         {
-            [typeof(ulong[])] = (size, records) => ConvertArray<ulong>(size, records),
-            [typeof(long[])] = (size, records) => ConvertArray<long>(size, records),
-            [typeof(float[])] = (size, records) => ConvertArray<float>(size, records),
-            [typeof(int[])] = (size, records) => ConvertArray<int>(size, records),
-            [typeof(uint[])] = (size, records) => ConvertArray<uint>(size, records),
-            [typeof(ulong[])] = (size, records) => ConvertArray<ulong>(size, records),
-            [typeof(short[])] = (size, records) => ConvertArray<short>(size, records),
-            [typeof(ushort[])] = (size, records) => ConvertArray<ushort>(size, records),
-            [typeof(byte[])] = (size, records) => ConvertArray<byte>(size, records),
-            [typeof(sbyte[])] = (size, records) => ConvertArray<sbyte>(size, records),
-            [typeof(string[])] = (size, records) => ConvertArray<string>(size, records),
+            [typeof(ulong[])] = ConvertArray<ulong>,
+            [typeof(long[])] = ConvertArray<long>,
+            [typeof(float[])] = ConvertArray<float>,
+            [typeof(int[])] = ConvertArray<int>,
+            [typeof(uint[])] = ConvertArray<uint>,
+            [typeof(short[])] = ConvertArray<short>,
+            [typeof(ushort[])] = ConvertArray<ushort>,
+            [typeof(byte[])] = ConvertArray<byte>,
+            [typeof(sbyte[])] = ConvertArray<sbyte>,
+            [typeof(string[])] = ConvertArray<string>,
         };
 
         public static object ConvertArray(Type type, int size, string[] records)
@@ -57,7 +59,12 @@ namespace WDBXEditor2.Helpers
 
         public static Type GetFieldType(DBCDRow row, string fieldName)
         {
-            var field = row.GetUnderlyingType().GetField(GetUnderlyingFieldName(row.GetUnderlyingType(), fieldName, out _));
+            return GetFieldType(row.GetUnderlyingType(), fieldName);
+        }
+
+        public static Type GetFieldType(Type t, string fieldName)
+        {
+            var field = t.GetField(GetUnderlyingFieldName(t, fieldName, out _));
             if (field.FieldType.IsArray)
             {
                 return field.FieldType.GetElementType();
@@ -65,7 +72,32 @@ namespace WDBXEditor2.Helpers
             return field.FieldType;
         }
 
-        private static string GetUnderlyingFieldName(Type type, string fieldName, out int index)
+        public static string[] GetColumnNames(IDBCDStorage storage)
+        {
+            var underlyingType = storage.GetType().GetGenericArguments()[0];
+            var fieldNames = storage.AvailableColumns;
+
+            return fieldNames
+                .SelectMany(name =>
+                {
+                    var field = underlyingType.GetField(name);
+                    if (field.FieldType.IsArray)
+                    {
+                        var count = field.GetCustomAttribute<CardinalityAttribute>().Count;
+                        var result = new string[count];
+                        for (int i = 0; i < result.Length; i++)
+                        {
+                            result[i] = name + i;
+                        }
+                        return result;
+                    }
+                    return new[] { name };
+                })
+                .ToArray();
+        }
+
+
+    private static string GetUnderlyingFieldName(Type type, string fieldName, out int index)
         {
             index = 0;
             var n = 1;
