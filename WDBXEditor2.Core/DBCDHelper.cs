@@ -52,8 +52,8 @@ namespace WDBXEditor2.Core
         public static object GetDBCRowColumn(DBCDRow row, string colName)
         {
             var fieldName = GetUnderlyingFieldName(row.GetUnderlyingType(), colName, out var arrayIndex);
-            var field = row.GetUnderlyingType().GetField(fieldName) ?? throw new InvalidOperationException("Invalid column name specified: " + colName);
-            if (field.FieldType.IsArray)
+            var value = row[fieldName];
+            if (value.GetType().IsArray)
             {
                 return ((Array)row[fieldName]).GetValue(arrayIndex)!;
             }

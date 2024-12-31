@@ -52,6 +52,7 @@ namespace WDBXEditor2.Controller
                         continue;
 
                     stopWatch = new Stopwatch();
+                    stopWatch.Start();
                     var storage = dbcd.Load(db2Name, definitionSelect.SelectedVersion, definitionSelect.SelectedLocale);
 
                     if (LoadedDBFiles.ContainsKey(db2Name))

@@ -1,6 +1,7 @@
 ﻿using CsvHelper;
 using DBCD;
 using MediatR;
+using System.Diagnostics;
 using System.Globalization;
 
 namespace WDBXEditor2.Core.Operations
@@ -19,90 +20,100 @@ namespace WDBXEditor2.Core.Operations
     {
         const int InsertsPerStatement = 1000;
 
-        public async Task Handle(ExportToSqlFileOperation request, CancellationToken cancellationToken)
+        public Task Handle(ExportToSqlFileOperation request, CancellationToken cancellationToken)
         {
             var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for import operation.");
+
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
 
             using (var fileStream = File.Create(request.FileName))
             using (var writer = new StreamWriter(fileStream))
             {
                 if (request.DropTable)
                 {
-                    await writer.WriteLineAsync($"DROP TABLE IF EXISTS {request.TableName};");
-                    await writer.WriteLineAsync();
+                    writer.WriteLine($"DROP TABLE IF EXISTS {request.TableName};");
+                    writer.WriteLine();
                 }
                 if (request.CreateTable)
                 {
-                    await WriteTableDefinition(dbcdStorage, writer, request.TableName);
+                    WriteTableDefinition(cancellationToken, dbcdStorage, writer, request.TableName);
                 }
                 if (request.ExportData)
                 {
-                    await WriteData(cancellationToken, request, writer);
+                    WriteData(cancellationToken, request, writer);
                 }
             }
+            stopWatch.Stop();
+            Console.WriteLine($"Exporting SQL File: {stopWatch.Elapsed}");
+            return Task.CompletedTask;
         }
 
-        private async Task WriteTableDefinition(IDBCDStorage storage, TextWriter writer, string tableName)
+        private void WriteTableDefinition(CancellationToken cancellationToken, IDBCDStorage storage, TextWriter writer, string tableName)
         {
             var underlyingType = storage.GetType().GetGenericArguments()[0];
             var columns = DBCDHelper.GetColumnNames(storage);
 
-            await writer.WriteLineAsync($"CREATE TABLE {tableName} (");
+            writer.WriteLine($"CREATE TABLE {tableName} (");
 
             for (var i = 0; i < columns.Length; i++)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
                 if (i > 0)
                 {
-                    await writer.WriteLineAsync(",");
+                    writer.WriteLine(",");
                 }
-                await writer.WriteAsync($"  {columns[i]} {GetSqlDataType(DBCDHelper.GetTypeForColumn(underlyingType, columns[i]))}");
+                writer.Write($"  {columns[i]} {GetSqlDataType(DBCDHelper.GetTypeForColumn(underlyingType, columns[i]))}");
             }
 
-            await writer.WriteLineAsync();
-            await writer.WriteLineAsync(");");
-            await writer.WriteLineAsync();
+            writer.WriteLine();
+            writer.WriteLine(");");
+            writer.WriteLine();
         }
 
-        private async Task WriteData(CancellationToken cancellationToken, ExportToSqlFileOperation request, TextWriter writer, string operation = "INSERT")
+        private void WriteData(CancellationToken cancellationToken, ExportToSqlFileOperation request, TextWriter writer, string operation = "INSERT")
         {
             var storage = request.Storage!;
 
             var rows = storage.Values;
             var processedCount = 0;
             var colNames = DBCDHelper.GetColumnNames(storage);
-
-            while (processedCount < rows.Count)
+            var enumerator = rows.GetEnumerator();
+            while (enumerator.MoveNext())
             {
                 if (cancellationToken.IsCancellationRequested) { 
                     return; 
                 }
 
-                var row = rows.ElementAt(processedCount);
+                var row = enumerator.Current;
 
                 if (processedCount % InsertsPerStatement == 0)
                 {
                     if (processedCount != 0)
                     {
-                        await writer.WriteLineAsync(";");
-                        await writer.WriteLineAsync();
+                        writer.WriteLine(";");
+                        writer.WriteLine();
                     }
-                    await writer.WriteLineAsync($"{operation} INTO {request.TableName} ({string.Join(", ", colNames)})");
-                    await writer.WriteLineAsync("VALUES");
+                    writer.WriteLine($"{operation} INTO {request.TableName} ({string.Join(", ", colNames)})");
+                    writer.WriteLine("VALUES");
                 }
                 else
                 {
-                    await writer.WriteLineAsync(",");
+                    writer.WriteLine(",");
                 }
 
-                await writer.WriteAsync($"  ({string.Join(",", colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x))))})");
+                writer.Write($"  ({string.Join(",", colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x))))})");
 
 
                 processedCount++;
                 var progress = (int)Math.Floor((float)processedCount / rows.Count * 100);
                 request.ProgressReporter?.ReportProgress(progress);
             }
-            await writer.WriteLineAsync(";");
-            await writer.WriteLineAsync();
+            writer.WriteLine(";");
+            writer.WriteLine();
         }
 
         private string GetSqlValue(object val)

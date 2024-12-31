@@ -8,6 +8,7 @@ using CsvHelper.Configuration;
 using CsvHelper;
 using MediatR;
 using DBCD;
+using System.Diagnostics;
 
 namespace WDBXEditor2.Core.Operations
 {
@@ -19,14 +20,18 @@ namespace WDBXEditor2.Core.Operations
 
     public class ExportToCsvOperationHandler : IRequestHandler<ExportToCsvOperation>
     {
-        public async Task Handle(ExportToCsvOperation request, CancellationToken cancellationToken)
+        public Task Handle(ExportToCsvOperation request, CancellationToken cancellationToken)
         {
             var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for export operation.");
 
             var columnNames = DBCDHelper.GetColumnNames(dbcdStorage);
             using var fileStream = File.Create(request.FileName);
             using var writer = new StreamWriter(fileStream);
-            await writer.WriteLineAsync(string.Join(",", columnNames));
+            writer.WriteLine(string.Join(",", columnNames));
+
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+
             using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 MemberTypes = MemberTypes.Fields,
@@ -39,14 +44,28 @@ namespace WDBXEditor2.Core.Operations
             {
                 csv.Context.TypeConverterCache.RemoveConverter<byte[]>();
                 var rows = dbcdStorage.Values;
+                var enumerator = rows.GetEnumerator();
+                enumerator.MoveNext();
                 for (var i = 0; i < rows.Count; i++)
                 {
-                    var progress = (int) ((float) i / rows.Count * 100f);
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
+
+                    var progress = (int)((float)i / rows.Count * 100f);
                     request.ProgressReporter?.ReportProgress(progress);
-                    csv.WriteRecord(rows.ElementAt(i));
-                    await csv.NextRecordAsync();
+                    csv.WriteRecord(enumerator.Current);
+                    csv.NextRecord();
+                    enumerator.MoveNext();
                 }
             }
+
+
+            stopWatch.Stop();
+            Console.WriteLine($"Exporting CSV. Elapsed Time: {stopWatch.Elapsed}");
+
+            return Task.CompletedTask;
         }
     }
 }
