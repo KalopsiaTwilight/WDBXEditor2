@@ -53,6 +53,9 @@ namespace WDBXEditor2.Views
                 int lastLocaleSelectedIndex = int.Parse(lastLocaleSelectedIndexSetting);
                 LocaleSelectList.SelectedIndex = lastLocaleSelectedIndex;
             }
+
+
+            Title = string.Format("Select Definition");
         }
 
         private void Load_Click(object sender, RoutedEventArgs e)
@@ -67,12 +70,6 @@ namespace WDBXEditor2.Views
             SelectedVersion = null;
             IsCanceled = true;
             Close();
-        }
-
-        public void SetDB2Name(string db2Name)
-        {
-            this.db2Name.Content = db2Name;
-            Title = string.Format("Select Definition: {0}", db2Name);
         }
 
         public void SetDefinitionFromVersionDefinitions(VersionDefinitions[] versionDefinitions)

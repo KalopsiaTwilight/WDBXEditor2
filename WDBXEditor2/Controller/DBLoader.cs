@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Windows;
 using WDBXEditor2.Misc;
 using WDBXEditor2.Views;
@@ -30,41 +31,32 @@ namespace WDBXEditor2.Controller
             LoadedDBFileVersions = new();
         }
 
-        public string[] LoadFiles(string[] files)
+        public string[] LoadFiles(string[] files, string build, Locale locale)
         {
             var loadedFiles = new List<string>();
             Stopwatch stopWatch = null;
 
             foreach (string db2Path in files)
             {
-                string db2Name = Path.GetFileNameWithoutExtension(db2Path);
+                string db2Name = GetDb2Name(db2Path);
 
                 try
                 {
-                    DefinitionSelect definitionSelect = ActivatorUtilities.CreateInstance<DefinitionSelect>(_serviceProvider);
-                    definitionSelect.SetDB2Name(db2Name);
-                    definitionSelect.SetDefinitionFromVersionDefinitions(GetVersionDefinitionsForDB2(db2Name));
-                    definitionSelect.ShowDialog();
-
                     var dbcd = new DBCD.DBCD(new FilesystemDBCProvider(Path.GetDirectoryName(db2Path)), _dbdProvider);
-
-                    if (definitionSelect.IsCanceled)
-                        continue;
-
                     stopWatch = new Stopwatch();
                     stopWatch.Start();
-                    var storage = dbcd.Load(db2Name, definitionSelect.SelectedVersion, definitionSelect.SelectedLocale);
+                    var storage = dbcd.Load(db2Name, build, locale);
 
                     if (LoadedDBFiles.ContainsKey(db2Name))
                     {
                         loadedFiles.Add(db2Name);
                         LoadedDBFiles[db2Name] = storage;
-                        LoadedDBFileVersions[db2Name] = (definitionSelect.SelectedVersion, definitionSelect.SelectedLocale);
+                        LoadedDBFileVersions[db2Name] = (build, locale);
                     }
                     else if (LoadedDBFiles.TryAdd(db2Name, storage))
                     {
                         loadedFiles.Add(db2Name);
-                        LoadedDBFileVersions.Add(db2Name, (definitionSelect.SelectedVersion, definitionSelect.SelectedLocale));
+                        LoadedDBFileVersions.Add(db2Name, (build, locale));
                     }
 
                     stopWatch.Stop();
@@ -92,6 +84,11 @@ namespace WDBXEditor2.Controller
             }
 
             return loadedFiles.ToArray();
+        }
+
+        public string GetDb2Name(string filePath)
+        {
+            return Path.GetFileNameWithoutExtension(filePath);
         }
 
         public void ReloadFile(string db2Path)

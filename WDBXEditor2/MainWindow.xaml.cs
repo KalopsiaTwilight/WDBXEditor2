@@ -70,11 +70,37 @@ namespace WDBXEditor2
             {
                 var files = openFileDialog.FileNames;
 
-                foreach (string loadedDB in dbLoader.LoadFiles(files))
+                DefinitionSelect definitionSelect = ActivatorUtilities.CreateInstance<DefinitionSelect>(_serviceProvider);
+                definitionSelect.SetDefinitionFromVersionDefinitions(dbLoader.GetVersionDefinitionsForDB2(dbLoader.GetDb2Name(files[0])));
+                definitionSelect.ShowDialog();
+
+                if (definitionSelect.IsCanceled)
                 {
-                    OpenedDB2Paths[loadedDB] = files.First(x => Path.GetFileNameWithoutExtension(x) == loadedDB);
-                    OpenDBItems.Items.Add(loadedDB);
+                    return;
                 }
+
+                Locale selectedLocale = definitionSelect.SelectedLocale;
+                string build = definitionSelect.SelectedVersion;
+                txtOperation.Text = "Parsing DB2 files...";
+                ProgressBar.IsIndeterminate = true;
+
+                Task.Run(() =>
+                {
+                    var loadedDBs = dbLoader.LoadFiles(files, build, selectedLocale);
+
+                    Dispatcher.Invoke(() =>
+                    {
+                        foreach (string loadedDB in loadedDBs)
+                        {
+                            OpenedDB2Paths[loadedDB] = files.First(x => Path.GetFileNameWithoutExtension(x) == loadedDB);
+                            OpenDBItems.Items.Add(loadedDB);
+                        }
+
+                        ProgressBar.IsIndeterminate = false;
+                        txtOperation.Text = "";
+                    });
+                });
+
             }
         }
 
@@ -95,7 +121,6 @@ namespace WDBXEditor2
                 _currentOrderedRows = storage.ToDictionary().OrderBy(x => x.Key).Select(x => x.Value).ToList();
                 ReloadDataView();
             }
-
         }
 
         /// <summary>
@@ -110,6 +135,7 @@ namespace WDBXEditor2
 
             // Clear DataGrid
             DB2DataGrid.Columns.Clear();
+            DB2DataGrid.ItemsSource = Array.Empty<int>();
 
             CurrentOpenDB2 = string.Empty;
             OpenedDB2Storage = null;
@@ -313,7 +339,7 @@ namespace WDBXEditor2
 
         public void ReloadDataView()
         {
-            RunOperationAsync("Reloading dataview...", new ReloadDataViewOperation());
+            RunOperationAsync("Loading dataview...", new ReloadDataViewOperation());
         }
 
         public void RunOperationAsync(string operationName, IRequest request, bool reload = false)
