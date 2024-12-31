@@ -5,52 +5,95 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WDBXEditor2.Views"
         mc:Ignorable="d"
-        Title="Set Column Value" Height="362" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
-    <Grid Margin="10,0,10,10">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="53*"/>
-        </Grid.ColumnDefinitions>
+        Title="Set Column Value" Height="338" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
+    <StackPanel Margin="10,0,10,10">
         <TextBlock TextWrapping="WrapWithOverflow" Height="32" VerticalAlignment="Top">
             This function will allow you to export data from this table to a SQL File/Database
         </TextBlock>
-        <TextBlock Margin="0,42,0,0" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Top">
+        <TextBlock Margin="0,16,0,0" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Top">
             Save To
         </TextBlock>
         <ComboBox 
             Name="ddlExportType" 
             Height="24" 
-            Width="239" 
-            HorizontalAlignment="Left" 
-            VerticalAlignment="Top"
-            Margin="0,68,0,0"
+            Width="238" 
+            Margin="0,8,0,0"
             SelectionChanged="ddlExportType_SelectionChanged"
             >
             <ComboBoxItem Content="File" IsSelected="True" />
             <ComboBoxItem Content="MySQL Database" />
         </ComboBox>
-        <TextBlock Margin="0,104,0,0" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Top">
+
+        <StackPanel x:Name="pnlDbConnection" VerticalAlignment="Top" Visibility="Collapsed" Margin="0,8,0,0">
+            <StackPanel.Resources>
+                <Style TargetType="{x:Type TextBox}">
+                    <Setter Property="Margin" Value="0,8,0,8"></Setter>
+                    <Setter Property="Height" Value="20"></Setter>
+                </Style>
+                <Style TargetType="{x:Type PasswordBox}">
+                    <Setter Property="Margin" Value="0,8,0,8"></Setter>
+                    <Setter Property="Height" Value="20"></Setter>
+                </Style>
+                <Style TargetType="{x:Type TextBlock}">
+                    <Setter Property="Height" Value="16"></Setter>
+                </Style>
+            </StackPanel.Resources>
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Hostname
+            </TextBlock>
+            <TextBox x:Name="tbHostname" Text="localhost"  />
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Port
+            </TextBlock>
+            <TextBox x:Name="tbPort"  Text="3306" />
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Username
+            </TextBlock>
+            <TextBox x:Name="tbUsername" Text="root" />
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Password
+            </TextBlock>
+            <PasswordBox x:Name="tbPassword" PasswordChanged="DbPassword_Changed" />
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Database
+            </TextBlock>
+
+            <ComboBox 
+                Name="ddlDatabase" 
+                Height="24" 
+                Width="238" 
+                Margin="0,10,0,0"
+                SelectionChanged="ddlDatabase_SelectionChanged"
+            >
+            </ComboBox>
+        </StackPanel>
+
+        <TextBlock Margin="0,8,0,0" TextWrapping="WrapWithOverflow" Height="16">
             Table Name
         </TextBlock>
         <ComboBox 
             Name="ddlTableName" 
             Height="24" 
-            Width="239" 
+            Width="238" 
             IsEditable="True"
-            HorizontalAlignment="Left" 
-            VerticalAlignment="Top"
-            Margin="0,128,0,0">
+            Margin="0,8,0,0">
         </ComboBox>
 
-        <TextBlock Margin="0,0,0, 136" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Bottom">
+        <TextBlock Margin="0,8,0,0" TextWrapping="WrapWithOverflow" Height="16">
             Options
         </TextBlock>
-        <CheckBox x:Name="cbCreateTable" Margin="0, 0, 0 , 112" Content="Create Table" VerticalAlignment="Bottom" IsChecked="True" />
-        <CheckBox x:Name="cbExportData" Margin="0, 0, 0 , 88" Content="Export Data" VerticalAlignment="Bottom" IsChecked="True"/>
-        <CheckBox x:Name="cbDropTable" Margin="0, 0, 0 , 64" Content="Drop Existing Table" VerticalAlignment="Bottom" />
+        <CheckBox x:Name="cbCreateTable" Margin="0, 8, 0, 0" Content="Create Table" IsChecked="True" />
+        <CheckBox x:Name="cbExportData" Margin="0, 8, 0 , 0" Content="Export Data"  IsChecked="True"/>
+        <CheckBox x:Name="cbDropTable" Margin="0, 8, 0 , 0" Content="Drop Existing Table" />
 
-        <ProgressBar x:Name="pbProgress" Margin="0, 0, 0, 40" VerticalAlignment="Bottom" Height="16" Visibility="Hidden" />
-
-        <Button x:Name="Ok" Width="100" Height="32" HorizontalAlignment="Left" VerticalAlignment="Bottom" Click="Ok_Click">Export</Button>
-        <Button x:Name="Cancel" Width="100" Height="32" HorizontalAlignment="Right" VerticalAlignment="Bottom" Click="Cancel_Click">Cancel</Button>
-    </Grid>
+        <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="Ok" Width="100" Height="32" Grid.Column="0"  Click="Ok_Click">Export</Button>
+            <Button x:Name="Cancel" Width="100" Height="32"  Grid.Column="2" Click="Cancel_Click">Cancel</Button>
+        </Grid>
+    </StackPanel>
 </Window>

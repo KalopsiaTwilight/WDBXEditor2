@@ -81,6 +81,11 @@ namespace WDBXEditor2.Core
         private static string GetUnderlyingFieldName(Type type, string fieldName, out int index)
         {
             index = 0;
+            if (type.GetField(fieldName) != null)
+            {
+                return fieldName;
+            }
+
             var n = 1;
             while (int.TryParse(fieldName[^1].ToString(), out var indexN))
             {
