@@ -3,9 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ctrl="clr-namespace:WDBXEditor2.Controls"
         xmlns:local="clr-namespace:WDBXEditor2.Views"
         mc:Ignorable="d"
-        Title="Set Column Value" Height="338" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
+        Title="Set Column Value" Height="362" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
     <StackPanel Margin="10,0,10,10">
         <TextBlock TextWrapping="WrapWithOverflow" Height="32" VerticalAlignment="Top">
             This function will allow you to export data from this table to a SQL File/Database
@@ -45,7 +46,7 @@
             <TextBlock TextWrapping="WrapWithOverflow">
                 Port
             </TextBlock>
-            <TextBox x:Name="tbPort"  Text="3306" />
+            <ctrl:PositiveIntegerTextBox x:Name="tbPort"  Text="3306" />
             <TextBlock TextWrapping="WrapWithOverflow">
                 Username
             </TextBlock>
@@ -82,9 +83,20 @@
         <TextBlock Margin="0,8,0,0" TextWrapping="WrapWithOverflow" Height="16">
             Options
         </TextBlock>
+        <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="140px" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock TextWrapping="WrapWithOverflow" Grid.Column="0">
+                 Inserts per statement
+            </TextBlock>
+            <ctrl:PositiveIntegerTextBox x:Name="tbNrInserts" Text="1000" Grid.Column="1" />
+        </Grid>
+
         <CheckBox x:Name="cbCreateTable" Margin="0, 8, 0, 0" Content="Create Table" IsChecked="True" />
         <CheckBox x:Name="cbExportData" Margin="0, 8, 0 , 0" Content="Export Data"  IsChecked="True"/>
-        <CheckBox x:Name="cbDropTable" Margin="0, 8, 0 , 0" Content="Drop Existing Table" />
+        <CheckBox x:Name="cbDropTable" Margin="0, 8, 0 , 0" Content="Drop Existing Table" IsChecked="True" />
 
         <Grid Margin="0,8,0,0">
             <Grid.ColumnDefinitions>

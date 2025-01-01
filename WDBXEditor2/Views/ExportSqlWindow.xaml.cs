@@ -1,9 +1,7 @@
 ﻿using Microsoft.Win32;
 using MySql.Data.MySqlClient;
-using Org.BouncyCastle.Asn1.Ocsp;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -16,8 +14,6 @@ namespace WDBXEditor2.Views
 
     public partial class ExportSqlWindow : Window
     {
-        const int InsertsPerStatement = 1000;
-
         private string selectedExportType = "File";
         private readonly MainWindow _mainWindow;
         private readonly ISettingsStorage _settings;
@@ -65,7 +61,6 @@ namespace WDBXEditor2.Views
 
         private bool SaveToSqlFile()
         {
-            var dbcdStorage = _mainWindow.OpenedDB2Storage;
             var saveFileDialog = new SaveFileDialog
             {
                 FileName = Path.GetFileNameWithoutExtension(_mainWindow.CurrentOpenDB2) + ".sql",
@@ -85,6 +80,7 @@ namespace WDBXEditor2.Views
                     FileName = saveFileDialog.FileName,
                     Storage = _mainWindow.OpenedDB2Storage,
                     TableName = ddlTableName.Text,
+                    InsertsPerStatement = uint.Parse(tbNrInserts.Text)
                 });
             }
             return isSuccess;
@@ -111,6 +107,7 @@ namespace WDBXEditor2.Views
                 ExportData = cbExportData.IsChecked == true,
                 Storage = _mainWindow.OpenedDB2Storage,
                 TableName = ddlTableName.Text,
+                InsertsPerStatement = uint.Parse(tbNrInserts.Text),
                 DatabaseHost = tbHostname.Text,
                 DatabasePort = uint.Parse(tbPort.Text),
                 DatabaseName = ddlDatabase.Text,
@@ -119,7 +116,6 @@ namespace WDBXEditor2.Views
             });
             return true;
         }
-
 
         private void ddlExportType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -133,13 +129,13 @@ namespace WDBXEditor2.Views
                 {
                     case "File":
                         {
-                            Height = 338;
+                            Height = 362;
                             pnlDbConnection.Visibility = Visibility.Collapsed;
                             break;
                         }
                     case "MySQL Database":
                         {
-                            Height = 600;
+                            Height = 624;
                             pnlDbConnection.Visibility = Visibility.Visible;
                             LoadDatabases();
                             LoadTables(ddlDatabase.Text);
