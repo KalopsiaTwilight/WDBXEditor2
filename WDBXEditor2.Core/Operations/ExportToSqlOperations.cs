@@ -15,6 +15,7 @@ namespace WDBXEditor2.Core.Operations
         public bool CreateTable { get; set; }
         public bool ExportData { get; set; }
         public string TableName { get; set; } = string.Empty;
+        public uint InsertsPerStatement { get; set; } = 1000;
     }
 
     public class ExportToSqlFileOperation : SQLExportOperationBase
@@ -34,8 +35,6 @@ namespace WDBXEditor2.Core.Operations
 
     public class ExportToSqlOperationsHandler : IRequestHandler<ExportToSqlFileOperation>, IRequestHandler<ExportToMysqlDatabaseOperation>
     {
-        const int InsertsPerStatement = 1000;
-
         public Task Handle(ExportToSqlFileOperation request, CancellationToken cancellationToken)
         {
             var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for import operation.");
@@ -59,24 +58,45 @@ namespace WDBXEditor2.Core.Operations
             stopWatch.Start();
 
             using var writer = new StringWriter();
-            WriteSqlFile(cancellationToken, request, writer, (x) => $"`{x}`");
+            if (request.DropTable)
+            {
+                writer.WriteLine($"DROP TABLE IF EXISTS `{request.TableName}`;");
+                writer.WriteLine();
+            }
+            if (request.CreateTable)
+            {
+                WriteTableDefinition(cancellationToken, request.Storage!, writer, request.TableName, (x) => $"`{x}`");
+            }
 
-            var connectionBuilder = new MySqlConnectionStringBuilder();
-            connectionBuilder.Database = request.DatabaseName;
-            connectionBuilder.UserID = request.DatabaseUser;
-            connectionBuilder.Password = request.DatabasePassword;
-            connectionBuilder.Server = request.DatabaseHost;
-            connectionBuilder.Port = request.DatabasePort;
+            var connectionBuilder = new MySqlConnectionStringBuilder
+            {
+                Database = request.DatabaseName,
+                UserID = request.DatabaseUser,
+                Password = request.DatabasePassword,
+                Server = request.DatabaseHost,
+                Port = request.DatabasePort
+            };
 
             using (var connection = new MySqlConnection(connectionBuilder.GetConnectionString(true)))
             {
                 connection.Open();
-                using (var transaction = connection.BeginTransaction())
+                var transaction = connection.BeginTransaction();
                 using (var command = connection.CreateCommand())
                 {
                     command.Transaction = transaction;
                     command.CommandText = writer.ToString();
                     command.ExecuteNonQuery();
+                }
+                if (request.ExportData)
+                {
+                    WriteDataToMySQL(cancellationToken, request, connection, transaction);
+                }
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    transaction.Rollback();
+                } else
+                {
+                    transaction.Commit();
                 }
                 connection.Close();
             }
@@ -100,7 +120,7 @@ namespace WDBXEditor2.Core.Operations
             }
             if (request.ExportData)
             {
-                WriteData(cancellationToken, request, writer, escapeFn);
+                WriteDataToFile(cancellationToken, request, writer, escapeFn);
             }
         }
 
@@ -129,7 +149,7 @@ namespace WDBXEditor2.Core.Operations
             writer.WriteLine();
         }
 
-        private void WriteData(CancellationToken cancellationToken, SQLExportOperationBase request, TextWriter writer, Func<string, string> escapeFn, string operation = "INSERT")
+        private void WriteDataToFile(CancellationToken cancellationToken, SQLExportOperationBase request, TextWriter writer, Func<string, string> escapeFn)
         {
             var storage = request.Storage!;
 
@@ -145,14 +165,14 @@ namespace WDBXEditor2.Core.Operations
 
                 var row = enumerator.Current;
 
-                if (processedCount % InsertsPerStatement == 0)
+                if (processedCount % request.InsertsPerStatement == 0)
                 {
                     if (processedCount != 0)
                     {
                         writer.WriteLine(";");
                         writer.WriteLine();
                     }
-                    writer.WriteLine($"{operation} INTO {escapeFn(request.TableName)} ({string.Join(", ", colNames.Select(escapeFn))})");
+                    writer.WriteLine($"INSERT INTO {escapeFn(request.TableName)}");
                     writer.WriteLine("VALUES");
                 }
                 else
@@ -160,8 +180,10 @@ namespace WDBXEditor2.Core.Operations
                     writer.WriteLine(",");
                 }
 
-                writer.Write($"  ({string.Join(",", colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x))))})");
-
+                var rowData = string.Join(",", 
+                    colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x), (txtVal) => txtVal.Replace("'", "''")))
+                );
+                writer.Write($"  ({rowData})");
 
                 processedCount++;
                 var progress = (int)Math.Floor((float)processedCount / rows.Count * 100);
@@ -171,7 +193,68 @@ namespace WDBXEditor2.Core.Operations
             writer.WriteLine();
         }
 
-        private string GetSqlValue(object val)
+        private void WriteDataToMySQL(CancellationToken cancellationToken, SQLExportOperationBase request, MySqlConnection connection, MySqlTransaction transaction)
+        {
+            var storage = request.Storage!;
+
+            var rows = storage.Values;
+            var processedCount = 0;
+            var colNames = DBCDHelper.GetColumnNames(storage);
+            var enumerator = rows.GetEnumerator();
+
+            var commandTextWriter = new StringWriter();
+            
+            while (enumerator.MoveNext())
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var row = enumerator.Current;
+
+                if (processedCount % request.InsertsPerStatement == 0)
+                {
+                    if (processedCount != 0)
+                    {
+                        commandTextWriter.WriteLine(";");
+
+                        var command = connection.CreateCommand();
+                        command.Transaction = transaction;
+                        command.CommandText = commandTextWriter.ToString();
+                        command.ExecuteNonQuery();
+
+                        commandTextWriter.GetStringBuilder().Length = 0;
+                    }
+                    commandTextWriter.WriteLine($"INSERT INTO `{request.TableName}`");
+                    commandTextWriter.WriteLine("VALUES");
+                }
+                else
+                {
+                    commandTextWriter.WriteLine(",");
+                }
+
+                var rowData = string.Join(",",
+                    colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x), MySqlHelper.EscapeString))
+                );
+                commandTextWriter.Write($"({rowData})");
+
+
+                processedCount++;
+                var progress = (int)Math.Floor((float)processedCount / rows.Count * 100);
+                request.ProgressReporter?.ReportProgress(progress);
+            }
+            
+
+            commandTextWriter.WriteLine(";");
+            commandTextWriter.WriteLine();
+            var finalCommand = connection.CreateCommand();
+            finalCommand.Transaction = transaction;
+            finalCommand.CommandText = commandTextWriter.ToString();
+            finalCommand.ExecuteNonQuery();
+        }
+
+        private string GetSqlValue(object val, Func<string, string> escapeStringFn)
         {
             if (val == null)
             {
@@ -179,7 +262,7 @@ namespace WDBXEditor2.Core.Operations
             }
             if (val is string txtVal)
             {
-                return "'" + txtVal.Replace("'", "''") + "'";
+                return  $"'{escapeStringFn(txtVal)}'";
             }
             if (val is float floatVal)
             {
