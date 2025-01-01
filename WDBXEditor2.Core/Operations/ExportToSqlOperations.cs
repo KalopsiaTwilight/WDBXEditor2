@@ -37,7 +37,7 @@ namespace WDBXEditor2.Core.Operations
     {
         public Task Handle(ExportToSqlFileOperation request, CancellationToken cancellationToken)
         {
-            var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for import operation.");
+            var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for export operation.");
 
             var stopWatch = new Stopwatch();
             stopWatch.Start();
@@ -54,6 +54,8 @@ namespace WDBXEditor2.Core.Operations
 
         public Task Handle(ExportToMysqlDatabaseOperation request, CancellationToken cancellationToken)
         {
+            var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for export operation.");
+
             var stopWatch = new Stopwatch();
             stopWatch.Start();
 
@@ -126,7 +128,7 @@ namespace WDBXEditor2.Core.Operations
 
         private void WriteTableDefinition(CancellationToken cancellationToken, IDBCDStorage storage, TextWriter writer, string tableName, Func<string, string> escapeFn)
         {
-            var underlyingType = storage.GetType().GetGenericArguments()[0];
+            var underlyingType = DBCDHelper.GetUnderlyingType(storage);
             var columns = DBCDHelper.GetColumnNames(storage);
 
             writer.WriteLine($"CREATE TABLE {escapeFn(tableName)} (");

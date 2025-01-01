@@ -12,13 +12,13 @@ using WDBXEditor2.Misc;
 namespace WDBXEditor2.Views
 {
 
-    public partial class ExportSqlWindow : Window
+    public partial class ImportSqlWindow : Window
     {
-        private string selectedExportType = "File";
+        private string selectedImportType = "MySQL Database";
         private readonly MainWindow _mainWindow;
         private readonly ISettingsStorage _settings;
 
-        public ExportSqlWindow(MainWindow mainWindow, ISettingsStorage settings)
+        public ImportSqlWindow(MainWindow mainWindow, ISettingsStorage settings)
         {
             InitializeComponent();
             _mainWindow = mainWindow;
@@ -26,26 +26,21 @@ namespace WDBXEditor2.Views
 
             ddlTableName.Text = _mainWindow.CurrentOpenDB2;
 
-            string lastExportTypeIndexStr = _settings.Get(Constants.SqlExportTypeStorageKey);
-            if (lastExportTypeIndexStr != null)
+            string lastImportTypeIndexStr = _settings.Get(Constants.SqlImportTypeStorageKey);
+            if (lastImportTypeIndexStr != null)
             {
-                ddlExportType.SelectedIndex = int.Parse(lastExportTypeIndexStr);
+                ddlImportType.SelectedIndex = int.Parse(lastImportTypeIndexStr);
             }
         }
 
         private void Ok_Click(object sender, RoutedEventArgs e)
         {
             var success = false;
-            switch (selectedExportType)
+            switch (selectedImportType)
             {
-                case "File":
-                    {
-                        success = SaveToSqlFile();
-                        break;
-                    }
                 case "MySQL Database":
                     {
-                        success = SaveToMysqlDatabase();
+                        success = ImportFromMySqlDatabase();
                         break;
                     }
             }
@@ -58,37 +53,9 @@ namespace WDBXEditor2.Views
         {
             Close();
         }
-
-        private bool SaveToSqlFile()
-        {
-            var saveFileDialog = new SaveFileDialog
-            {
-                FileName = Path.GetFileNameWithoutExtension(_mainWindow.CurrentOpenDB2) + ".sql",
-                Filter = "SQL Script (*.sql)|*.sql",
-                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyComputer)
-            };
-
-
-            var isSuccess = saveFileDialog.ShowDialog() == true;
-            if (isSuccess)
-            {
-                _mainWindow.RunOperationAsync("Exporting to SQL File...", new ExportToSqlFileOperation()
-                {
-                    CreateTable = cbCreateTable.IsChecked == true,
-                    DropTable = cbDropTable.IsChecked == true,
-                    ExportData = cbExportData.IsChecked == true,
-                    FileName = saveFileDialog.FileName,
-                    Storage = _mainWindow.OpenedDB2Storage,
-                    TableName = ddlTableName.Text,
-                    InsertsPerStatement = uint.Parse(tbNrInserts.Text)
-                });
-            }
-            return isSuccess;
-        }
-
-        private bool SaveToMysqlDatabase()
+        private bool ImportFromMySqlDatabase()
         { 
-            if (string.IsNullOrEmpty(ddlDatabase.Text))
+            if (string.IsNullOrEmpty(ddlTableName.Text))
             {
                 MessageBox.Show(
                     "Export to Mysql requires a valid database connection and database selected.",
@@ -100,42 +67,32 @@ namespace WDBXEditor2.Views
             }
 
             var dbcdStorage = _mainWindow.OpenedDB2Storage;
-            _mainWindow.RunOperationAsync("Exporting to MySQL database", new ExportToMysqlDatabaseOperation()
+            _mainWindow.RunOperationAsync("Importing from MySQL database", new ImportFromMysqlDatabaseOperation()
             {
-                CreateTable = cbCreateTable.IsChecked == true,
-                DropTable = cbDropTable.IsChecked == true,
-                ExportData = cbExportData.IsChecked == true,
                 Storage = _mainWindow.OpenedDB2Storage,
                 TableName = ddlTableName.Text,
-                InsertsPerStatement = uint.Parse(tbNrInserts.Text),
                 DatabaseHost = tbHostname.Text,
                 DatabasePort = uint.Parse(tbPort.Text),
                 DatabaseName = ddlDatabase.Text,
                 DatabaseUser = tbUsername.Text,
                 DatabasePassword = tbPassword.Password
-            });
+            }, true);
             return true;
         }
 
-        private void ddlExportType_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void ddlImportType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var newExportType = (e.AddedItems[0] as ComboBoxItem)?.Content?.ToString();
-            if (selectedExportType != newExportType)
+            if (selectedImportType != newExportType)
             {
-                selectedExportType = newExportType;
-                _settings.Store(Constants.SqlExportTypeStorageKey, ddlExportType.SelectedIndex.ToString());
+                selectedImportType = newExportType;
+                _settings.Store(Constants.SqlImportTypeStorageKey, ddlImportType.SelectedIndex.ToString());
 
-                switch (selectedExportType)
+                switch (selectedImportType)
                 {
-                    case "File":
-                        {
-                            Height = 362;
-                            pnlDbConnection.Visibility = Visibility.Collapsed;
-                            break;
-                        }
                     case "MySQL Database":
                         {
-                            Height = 624;
+                            Height = 524;
                             pnlDbConnection.Visibility = Visibility.Visible;
                             LoadDatabases();
                             LoadTables(ddlDatabase.Text);
@@ -166,7 +123,7 @@ namespace WDBXEditor2.Views
                 return;
             }
 
-            switch (selectedExportType)
+            switch (selectedImportType)
             {
                 case "MySQL Database":
                     {
@@ -178,11 +135,12 @@ namespace WDBXEditor2.Views
         private void LoadTables(string database)
         {
             ddlTableName.Items.Clear();
+            ddlTableName.IsEnabled = false;
             if (string.IsNullOrEmpty(tbPassword.Password) || string.IsNullOrEmpty(database))
             {
                 return;
             }
-            switch (selectedExportType)
+            switch (selectedImportType)
             {
                 case "MySQL Database":
                     {
@@ -257,6 +215,7 @@ namespace WDBXEditor2.Views
                         {
                             ddlTableName.Items.Add(database);
                         }
+                        ddlTableName.IsEnabled = true;
                     });
                 }
                 catch (MySqlException ex)

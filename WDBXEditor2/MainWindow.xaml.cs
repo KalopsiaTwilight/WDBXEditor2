@@ -268,6 +268,8 @@ namespace WDBXEditor2
         {
             if (string.IsNullOrEmpty(CurrentOpenDB2))
                 return;
+
+            ActivatorUtilities.CreateInstance<ImportSqlWindow>(_serviceProvider).Show();
         }
 
         private void SetColumn_Click(object sender, RoutedEventArgs e)

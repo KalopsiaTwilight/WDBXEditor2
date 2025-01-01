@@ -1,0 +1,94 @@
+﻿<Window x:Class="WDBXEditor2.Views.ImportSqlWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ctrl="clr-namespace:WDBXEditor2.Controls"
+        xmlns:local="clr-namespace:WDBXEditor2.Views"
+        mc:Ignorable="d"
+        Title="Set Column Value" Height="524" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
+    <StackPanel Margin="10,0,10,10">
+        <TextBlock TextWrapping="WrapWithOverflow" VerticalAlignment="Top">
+            This function will allow you to import data from a SQL database. This requires that your column names match with the table definition.
+        </TextBlock>
+        <TextBlock Margin="0,16,0,0" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Top">
+            Import From
+        </TextBlock>
+        <ComboBox 
+            Name="ddlImportType" 
+            Height="24" 
+            Width="238" 
+            Margin="0,8,0,0"
+            SelectionChanged="ddlImportType_SelectionChanged"
+            >
+            <ComboBoxItem Content="MySQL Database" IsSelected="True" />
+        </ComboBox>
+
+        <StackPanel x:Name="pnlDbConnection" VerticalAlignment="Top" Visibility="Visible" Margin="0,8,0,0">
+            <StackPanel.Resources>
+                <Style TargetType="{x:Type TextBox}">
+                    <Setter Property="Margin" Value="0,8,0,8"></Setter>
+                    <Setter Property="Height" Value="20"></Setter>
+                </Style>
+                <Style TargetType="{x:Type PasswordBox}">
+                    <Setter Property="Margin" Value="0,8,0,8"></Setter>
+                    <Setter Property="Height" Value="20"></Setter>
+                </Style>
+                <Style TargetType="{x:Type TextBlock}">
+                    <Setter Property="Height" Value="16"></Setter>
+                </Style>
+            </StackPanel.Resources>
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Hostname
+            </TextBlock>
+            <TextBox x:Name="tbHostname" Text="localhost"  />
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Port
+            </TextBlock>
+            <ctrl:PositiveIntegerTextBox x:Name="tbPort"  Text="3306" />
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Username
+            </TextBlock>
+            <TextBox x:Name="tbUsername" Text="root" />
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Password
+            </TextBlock>
+            <PasswordBox x:Name="tbPassword" PasswordChanged="DbPassword_Changed" />
+            <TextBlock TextWrapping="WrapWithOverflow">
+                Database
+            </TextBlock>
+
+            <ComboBox 
+                Name="ddlDatabase" 
+                Height="24" 
+                Width="238" 
+                Margin="0,10,0,0"
+                SelectionChanged="ddlDatabase_SelectionChanged"
+                IsEnabled="False"
+            >
+            </ComboBox>
+        </StackPanel>
+
+        <TextBlock Margin="0,8,0,0" TextWrapping="WrapWithOverflow" Height="16">
+            Table Name
+        </TextBlock>
+        <ComboBox 
+            Name="ddlTableName" 
+            Height="24" 
+            Width="238" 
+            Margin="0,8,0,0"
+            IsEnabled="False"
+            >
+        </ComboBox>
+
+        <Grid Margin="0,8,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button x:Name="Ok" Width="100" Height="32" Grid.Column="0"  Click="Ok_Click">Import</Button>
+            <Button x:Name="Cancel" Width="100" Height="32"  Grid.Column="2" Click="Cancel_Click">Cancel</Button>
+        </Grid>
+    </StackPanel>
+</Window>

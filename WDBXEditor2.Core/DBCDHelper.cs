@@ -6,9 +6,14 @@ namespace WDBXEditor2.Core
 {
     public class DBCDHelper
     {
+        public static Type GetUnderlyingType(IDBCDStorage storage)
+        {
+            return storage.GetType().GetGenericArguments()[0];
+        }
+ 
         public static string[] GetColumnNames(IDBCDStorage storage)
         {
-            var underlyingType = storage.GetType().GetGenericArguments()[0];
+            var underlyingType = GetUnderlyingType(storage);
             var fieldNames = storage.AvailableColumns;
 
             return fieldNames

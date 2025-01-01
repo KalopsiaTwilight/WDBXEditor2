@@ -7,6 +7,7 @@ namespace WDBXEditor2
         public static string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
         public const string LastLocaleStorageKey = "LastLocaleSelectedIndex";
-        public const string ExportTypeStorageKey = "LastSelectedSQLExportTypeIndex";
+        public const string SqlExportTypeStorageKey = "LastSelectedSQLExportTypeIndex";
+        public const string SqlImportTypeStorageKey = "LastSelectedSQLImportTypeIndex";
     }
 }

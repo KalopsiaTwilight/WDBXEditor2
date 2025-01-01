@@ -53,7 +53,6 @@ namespace WDBXEditor2.Core.Operations
                     var row = dbcdStorage.ConstructRow(id);
 
                     var fields = underlyingType.GetFields();
-                    var arrayFields = fields.Where(x => x.FieldType.IsArray);
                     foreach (var field in fields)
                     {
                         if (field.FieldType.IsArray)
