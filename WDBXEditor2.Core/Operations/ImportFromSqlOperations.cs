@@ -54,6 +54,19 @@ namespace WDBXEditor2.Core.Operations
 
             var underlyingType = DBCDHelper.GetUnderlyingType(dbcdStorage);
             var fields = underlyingType.GetFields();
+
+            int idFieldIndex = 0;
+            for(var i = 0; i < colNames.Length; i++)
+            {
+                var fieldName = DBCDHelper.GetUnderlyingFieldName(underlyingType, colNames[i], out var _);
+                if (underlyingType.GetField(fieldName)!.GetCustomAttribute<IndexAttribute>() != null)
+                {
+                    idFieldIndex = i; 
+                    break;
+                }
+            }
+
+            var idField = fields.Where(x => x.GetCustomAttribute<IndexAttribute>() != null).FirstOrDefault();
             var processedCount = 0;
 
             using (var connection = new MySqlConnection(connectionBuilder.GetConnectionString(true)))
@@ -74,8 +87,8 @@ namespace WDBXEditor2.Core.Operations
                         return Task.CompletedTask;
                     }
                     var currentCol = 0;
-                    // TODO: CHheck if this is always true
-                    var id = (int)reader.GetValue(currentCol++);
+                    
+                    var id = reader.GetInt32(idFieldIndex);
                     var row = dbcdStorage.ConstructRow(id);
 
                     foreach (var field in fields)
@@ -83,6 +96,7 @@ namespace WDBXEditor2.Core.Operations
                         if (field.GetCustomAttribute<IndexAttribute>() != null)
                         {
                             row[field.Name] = id;
+                            currentCol++;
                             continue;
                         }
                         if (field.FieldType.IsArray)
