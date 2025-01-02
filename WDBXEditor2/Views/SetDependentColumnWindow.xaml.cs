@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Windows;
 using WDBXEditor2.Core;
+using WDBXEditor2.Core.Operations;
 
 namespace WDBXEditor2.Views
 {
@@ -20,16 +21,15 @@ namespace WDBXEditor2.Views
 
         private void Ok_Click(object sender, RoutedEventArgs e)
         {
-            var dbcdStorage = _mainWindow.OpenedDB2Storage;
-            var columnName = ddlColumnName.SelectedValue.ToString();
-            var foreignColumnName = ddlForeignColumn.SelectedValue.ToString();
-            foreach (var row in dbcdStorage.Values)
+            _mainWindow.RunOperationAsync(new SetDependentColumnOperation()
             {
-                if (row[columnName].ToString() == txtPrimaryValue.Text)
-                {
-                    DBCDHelper.SetDBCRowColumn(row, foreignColumnName, txtForeignValue.Text);
-                }
-            }
+                Storage = _mainWindow.OpenedDB2Storage,
+                PrimaryColumnName = ddlColumnName.SelectedValue.ToString(),
+                PrimaryValue = txtPrimaryValue.Text,
+                ForeignColumnName = ddlForeignColumn.SelectedValue.ToString(),
+                ForeignValue = txtForeignValue.Text,
+            }, true);
+
             _mainWindow.ReloadDataView();
             Close();
         }

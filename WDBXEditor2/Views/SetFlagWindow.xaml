@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WDBXEditor2.Views"
+        xmlns:ctrl="clr-namespace:WDBXEditor2.Controls"
         mc:Ignorable="d"
         Title="Set/Unset Flag Bit" Height="260" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
     <Grid Margin="10,0,10,10">
@@ -28,11 +29,11 @@
         <TextBlock Margin="0,104,0,0" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Top">
             Flag Bit (1 or power of 2 i.e. 1,2,4,8,16,32)
         </TextBlock>
-        <TextBox 
+        <ctrl:PositiveIntegerTextBox 
             Margin="0,122,0,0"  
             Height="24" 
             VerticalAlignment="Top"
-            Name="txtValue"
+            x:Name="txtValue"
         />
         <CheckBox Name="cbUnsetBit" 
             Margin="0,156,0,0"

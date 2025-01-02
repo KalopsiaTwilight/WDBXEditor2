@@ -146,9 +146,11 @@ namespace WDBXEditor2
         {
             if (!string.IsNullOrEmpty(CurrentOpenDB2))
             {
-                dbLoader.LoadedDBFiles[CurrentOpenDB2].Save(OpenedDB2Paths[CurrentOpenDB2]);
-                dbLoader.ReloadFile(OpenedDB2Paths[CurrentOpenDB2]);
-                ReloadDataView();
+                RunOperationAsync(new SaveDb2ToFileOperation()
+                {
+                    Storage = OpenedDB2Storage,
+                    FileName = OpenedDB2Paths[CurrentOpenDB2]
+                });
             }
         }
 
@@ -166,7 +168,11 @@ namespace WDBXEditor2
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                dbLoader.LoadedDBFiles[CurrentOpenDB2].Save(saveFileDialog.FileName);
+                RunOperationAsync(new SaveDb2ToFileOperation()
+                {
+                    Storage = OpenedDB2Storage,
+                    FileName = saveFileDialog.FileName
+                });
             }
         }
 
@@ -258,49 +264,32 @@ namespace WDBXEditor2
 
         private void ExportSql_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(CurrentOpenDB2))
-                return;
-
-            ActivatorUtilities.CreateInstance<ExportSqlWindow>(_serviceProvider).Show();
+            OpenWindow<ExportSqlWindow>();
         }
 
         private void ImportSql_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(CurrentOpenDB2))
-                return;
-
-            ActivatorUtilities.CreateInstance<ImportSqlWindow>(_serviceProvider).Show();
+            OpenWindow<ImportSqlWindow>();
         }
 
         private void SetColumn_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(CurrentOpenDB2))
-                return;
-            new SetColumnWindow(this).Show();
+            OpenWindow<SetColumnWindow>();
         }
 
         private void ReplaceColumn_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(CurrentOpenDB2))
-                return;
-
-            new ReplaceColumnWindow(this).Show();
+            OpenWindow<ReplaceColumnWindow>();
         }
 
         private void SetBitColumn_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(CurrentOpenDB2))
-                return;
-
-            new SetFlagWindow(this).Show();
+            OpenWindow<SetFlagWindow>();
         }
 
         private void SetDependentColumn_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(CurrentOpenDB2))
-                return;
-
-            new SetDependentColumnWindow(this).Show();
+            OpenWindow<SetDependentColumnWindow>();
         }
 
         internal void Data_RowDeleted(object sender, DataRowChangeEventArgs e)
@@ -342,6 +331,14 @@ namespace WDBXEditor2
         public void ReloadDataView()
         {
             RunOperationAsync(new ReloadDataViewOperation());
+        }
+
+        private void OpenWindow<T>() where T : Window
+        {
+            if (string.IsNullOrEmpty(CurrentOpenDB2))
+                return;
+
+            ActivatorUtilities.CreateInstance<T>(_serviceProvider).Show();
         }
 
         public void BlockUI()

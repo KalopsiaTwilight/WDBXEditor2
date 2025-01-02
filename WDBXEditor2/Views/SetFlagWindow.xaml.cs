@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Windows;
 using WDBXEditor2.Core;
+using WDBXEditor2.Core.Operations;
 
 namespace WDBXEditor2.Views
 {
@@ -18,28 +19,13 @@ namespace WDBXEditor2.Views
 
         private void Ok_Click(object sender, RoutedEventArgs e)
         {
-            var dbcdStorage = _mainWindow.OpenedDB2Storage;
-            var columnName = ddlColumnName.SelectedValue.ToString();
-            var bitVal = int.Parse(txtValue.Text);
-            foreach (var row in dbcdStorage.Values)
+            _mainWindow.RunOperationAsync(new SetFlagOperation()
             {
-                var rowVal = Convert.ToInt32(row[columnName]);
-                if (cbUnsetBit.IsChecked ?? false)
-                {
-                    if ((rowVal & bitVal) > 0)
-                    {
-                        DBCDHelper.SetDBCRowColumn(row, columnName, rowVal - bitVal);
-                    }
-                } else
-                {
-                    if ((rowVal & bitVal) == 0)
-                    {
-                        DBCDHelper.SetDBCRowColumn(row, columnName, rowVal + bitVal);
-                    }
-
-                }
-            }
-            _mainWindow.ReloadDataView();
+                BitValue = uint.Parse(txtValue.Text),
+                Unset = cbUnsetBit.IsChecked ?? false,
+                ColumnName = ddlColumnName.SelectedValue.ToString(),
+                Storage = _mainWindow.OpenedDB2Storage
+            }, true);
             Close();
         }
 
