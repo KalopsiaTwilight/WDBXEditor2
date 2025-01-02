@@ -3,6 +3,7 @@ using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,16 +21,62 @@ namespace WDBXEditor2.Views
 
         public ExportSqlWindow(MainWindow mainWindow, ISettingsStorage settings)
         {
-            InitializeComponent();
             _mainWindow = mainWindow;
             _settings = settings;
+            InitializeComponent();
 
-            ddlTableName.Text = _mainWindow.CurrentOpenDB2;
+            LoadFormValuesFromSettingStorage();
+        }
 
+        private void LoadFormValuesFromSettingStorage()
+        {
             string lastExportTypeIndexStr = _settings.Get(Constants.SqlExportTypeStorageKey);
             if (lastExportTypeIndexStr != null)
             {
                 ddlExportType.SelectedIndex = int.Parse(lastExportTypeIndexStr);
+            }
+
+            string lastDbHost = _settings.Get(Constants.LastExportMySqlDbHostnameKey) ?? _settings.Get(Constants.LastImportMySqlDbHostnameKey);
+            if (lastDbHost != null)
+            {
+                tbHostname.Text = lastDbHost;
+            } else
+            {
+                tbHostname.Text = "localhost";
+            }
+
+            string lastDbPort = _settings.Get(Constants.LastExportMySqlDbPortKey) ?? _settings.Get(Constants.LastImportMySqlDbPortKey);
+            if (lastDbPort != null)
+            {
+                tbPort.Text = lastDbPort;
+            } else
+            {
+                tbPort.Text = "3306";
+            }
+
+            string lastDbUsername = _settings.Get(Constants.LastExportMySqlDbUserKey) ?? _settings.Get(Constants.LastImportMySqlDbUserKey);
+            if (lastDbUsername != null)
+            {
+                tbUsername.Text = lastDbUsername;
+            } else
+            {
+                tbUsername.Text = "root";
+            }
+
+            string lastDbPassword = _settings.Get(Constants.LastExportMySqlDbPasswordKey) ?? _settings.Get(Constants.LastImportMySqlDbPasswordKey);
+            if (lastDbPassword != null)
+            {
+                tbPassword.Password = lastDbPassword;                
+            }
+
+            var lastTableName = _settings.Get(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+            lastTableName ??= _settings.Get(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+            if (lastTableName != null)
+            {
+                ddlTableName.Text = lastTableName;
+            } else
+            {
+                ddlTableName.Text = _mainWindow.CurrentOpenDB2.ToLower();
             }
         }
 
@@ -51,6 +98,30 @@ namespace WDBXEditor2.Views
             }
             if (success)
             {
+                _settings.Store(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2, ddlTableName.Text);
+
+                var storeDbPass = _settings.Get(Constants.StoreDbPasswords);
+                if (storeDbPass == null)
+                {
+                    var savePassResult = MessageBox.Show(
+                        "Would you like to store the last used password for database connections for future exports and imports?\n\nNOTE: Passwords will be stored as plaintext, meaning they will be readable from this application's settings storage by others.",
+                        "Store database passwords?", MessageBoxButton.YesNo, MessageBoxImage.Information
+                    );
+                    if (savePassResult == MessageBoxResult.Yes)
+                    {
+                        _settings.Store(Constants.StoreDbPasswords, "true");
+                        storeDbPass = "true";
+                    }
+                    else
+                    {
+                        _settings.Store(Constants.StoreDbPasswords, "false");
+                        storeDbPass = "false";
+                    }
+                }
+                if (bool.Parse(storeDbPass))
+                {
+                    _settings.Store(Constants.LastExportMySqlDbPasswordKey, tbPassword.Password);
+                }
                 Close();
             }
         }
@@ -145,15 +216,34 @@ namespace WDBXEditor2.Views
             }
         }
 
-        private void ddlDatabase_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void tbHostname_TextChanged(object sender, TextChangedEventArgs e)
         {
-            var newDatabase = e.AddedItems[0] as string;
-            LoadTables(newDatabase);
+            _settings.Store(Constants.LastExportMySqlDbHostnameKey, tbHostname.Text);
+            LoadDatabases();
+        }
+
+        private void tbPort_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _settings.Store(Constants.LastExportMySqlDbPortKey, tbPort.Text);
+            LoadDatabases();
+        }
+
+        private void tbUsername_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _settings.Store(Constants.LastExportMySqlDbUserKey, tbUsername.Text);
+            LoadDatabases();
         }
 
         private void DbPassword_Changed(object sender, RoutedEventArgs e)
         {
             LoadDatabases();
+        }
+
+        private void ddlDatabase_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var newDatabase = e.AddedItems[0] as string;
+            _settings.Store(Constants.LastExportMySqlDbNameKey, newDatabase);
+            LoadTables(newDatabase);
         }
 
         private void LoadDatabases()
@@ -217,6 +307,15 @@ namespace WDBXEditor2.Views
                             ddlDatabase.Items.Add(database);
                         }
                         ddlDatabase.IsEnabled = true;
+                        var lastSelected = _settings.Get(Constants.LastExportMySqlDbNameKey) ?? _settings.Get(Constants.LastImportMySqlDbNameKey);
+                        if (lastSelected != null && ddlDatabase.Items.Contains(lastSelected))
+                        {
+                            ddlDatabase.Text = lastSelected;
+                            ddlDatabase.SelectedItem = lastSelected;
+                        } else
+                        {
+                            ddlDatabase.SelectedIndex = 0;
+                        }
                     });
                 }
                 catch (MySqlException ex)
@@ -256,6 +355,12 @@ namespace WDBXEditor2.Views
                         foreach (var database in tables)
                         {
                             ddlTableName.Items.Add(database);
+                        }
+                        var lastSelected = _settings.Get(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        lastSelected ??= _settings.Get(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        if (lastSelected != null)
+                        {
+                            ddlTableName.Text = lastSelected;
                         }
                     });
                 }

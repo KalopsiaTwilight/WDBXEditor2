@@ -42,15 +42,15 @@
             <TextBlock TextWrapping="WrapWithOverflow">
                 Hostname
             </TextBlock>
-            <TextBox x:Name="tbHostname" Text="localhost"  />
+            <TextBox x:Name="tbHostname" TextChanged="tbHostname_TextChanged"  />
             <TextBlock TextWrapping="WrapWithOverflow">
                 Port
             </TextBlock>
-            <ctrl:PositiveIntegerTextBox x:Name="tbPort"  Text="3306" />
+            <ctrl:PositiveIntegerTextBox x:Name="tbPort" TextChanged="tbPort_TextChanged" />
             <TextBlock TextWrapping="WrapWithOverflow">
                 Username
             </TextBlock>
-            <TextBox x:Name="tbUsername" Text="root" />
+            <TextBox x:Name="tbUsername" TextChanged="tbUsername_TextChanged" />
             <TextBlock TextWrapping="WrapWithOverflow">
                 Password
             </TextBlock>
@@ -77,7 +77,8 @@
             Height="24" 
             Width="238" 
             IsEditable="True"
-            Margin="0,8,0,0">
+            Margin="0,8,0,0"
+            >
         </ComboBox>
 
         <TextBlock Margin="0,8,0,0" TextWrapping="WrapWithOverflow" Height="16">

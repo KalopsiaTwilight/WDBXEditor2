@@ -9,7 +9,7 @@
         Title="Set Column Value" Height="524" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
     <StackPanel Margin="10,0,10,10">
         <TextBlock TextWrapping="WrapWithOverflow" VerticalAlignment="Top">
-            This function will allow you to import data from a SQL database. This requires that your column names match with the table definition.
+            This function will allow you to import data from a SQL database. This requires that your column names match with the generated table definition.
         </TextBlock>
         <TextBlock Margin="0,16,0,0" TextWrapping="WrapWithOverflow" Height="16" VerticalAlignment="Top">
             Import From
@@ -41,15 +41,15 @@
             <TextBlock TextWrapping="WrapWithOverflow">
                 Hostname
             </TextBlock>
-            <TextBox x:Name="tbHostname" Text="localhost"  />
+            <TextBox x:Name="tbHostname" TextChanged="tbHostname_TextChanged"  />
             <TextBlock TextWrapping="WrapWithOverflow">
                 Port
             </TextBlock>
-            <ctrl:PositiveIntegerTextBox x:Name="tbPort"  Text="3306" />
+            <ctrl:PositiveIntegerTextBox x:Name="tbPort" TextChanged="tbPort_TextChanged" />
             <TextBlock TextWrapping="WrapWithOverflow">
                 Username
             </TextBlock>
-            <TextBox x:Name="tbUsername" Text="root" />
+            <TextBox x:Name="tbUsername" TextChanged="tbUsername_TextChanged" />
             <TextBlock TextWrapping="WrapWithOverflow">
                 Password
             </TextBlock>
