@@ -32,6 +32,8 @@ namespace WDBXEditor2.Core.Operations
             var stopWatch = new Stopwatch();
             stopWatch.Start();
 
+            request.ProgressReporter?.SetOperationName("Export to CSV - Writing data...");
+
             using (var csv = new CsvWriter(writer, new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 MemberTypes = MemberTypes.Fields,

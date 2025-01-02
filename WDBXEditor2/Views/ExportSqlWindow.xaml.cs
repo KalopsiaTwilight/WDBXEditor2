@@ -143,7 +143,7 @@ namespace WDBXEditor2.Views
             var isSuccess = saveFileDialog.ShowDialog() == true;
             if (isSuccess)
             {
-                _mainWindow.RunOperationAsync("Exporting to SQL File...", new ExportToSqlFileOperation()
+                _mainWindow.RunOperationAsync(new ExportToSqlFileOperation()
                 {
                     CreateTable = cbCreateTable.IsChecked == true,
                     DropTable = cbDropTable.IsChecked == true,
@@ -171,7 +171,7 @@ namespace WDBXEditor2.Views
             }
 
             var dbcdStorage = _mainWindow.OpenedDB2Storage;
-            _mainWindow.RunOperationAsync("Exporting to MySQL database", new ExportToMysqlDatabaseOperation()
+            _mainWindow.RunOperationAsync(new ExportToMysqlDatabaseOperation()
             {
                 CreateTable = cbCreateTable.IsChecked == true,
                 DropTable = cbDropTable.IsChecked == true,

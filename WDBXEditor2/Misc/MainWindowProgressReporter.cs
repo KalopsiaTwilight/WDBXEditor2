@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using WDBXEditor2.Core;
 
 namespace WDBXEditor2.Misc
@@ -29,6 +25,22 @@ namespace WDBXEditor2.Misc
                     MainWindow.ProgressBar.Value = progressPercentage;
                 });
             }
+        }
+
+        public void SetOperationName(string operationName)
+        {
+            MainWindow.Dispatcher.Invoke(() =>
+            {
+                MainWindow.txtOperation.Text = operationName;
+            });
+        }
+
+        public void SetIsIndeterminate(bool isIndeterminate)
+        {
+            MainWindow.Dispatcher.Invoke(() =>
+            {
+                MainWindow.ProgressBar.IsIndeterminate = isIndeterminate;
+            });
         }
     }
 }

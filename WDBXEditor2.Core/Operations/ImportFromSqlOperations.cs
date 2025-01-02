@@ -73,10 +73,12 @@ namespace WDBXEditor2.Core.Operations
             {
                 connection.Open();
 
+                request.ProgressReporter?.SetOperationName("Import from MySQL - Checking # of rows to import...");
                 var countCommand = connection.CreateCommand(); 
                 countCommand.CommandText = $"SELECT COUNT(*) FROM {EscapeMySqlName(request.TableName)}";
                 var totalRecords = (long) countCommand.ExecuteScalar();
 
+                request.ProgressReporter?.SetOperationName("Import from MySQL - Importing data...");
                 var readCommand = connection.CreateCommand();
                 readCommand.CommandText = $"SELECT {string.Join(", ", colNames.Select(EscapeMySqlName))} FROM {EscapeMySqlName(request.TableName)}";
                 var reader = readCommand.ExecuteReader();

@@ -42,6 +42,8 @@ namespace WDBXEditor2.Core.Operations
             var stopWatch = new Stopwatch();
             stopWatch.Start();
 
+            request.ProgressReporter?.SetOperationName("Export to SQL File - Writing data...");
+
             using (var fileStream = File.Create(request.FileName))
             using (var writer = new StreamWriter(fileStream))
             {
@@ -55,6 +57,9 @@ namespace WDBXEditor2.Core.Operations
         public Task Handle(ExportToMysqlDatabaseOperation request, CancellationToken cancellationToken)
         {
             var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for export operation.");
+
+            request.ProgressReporter?.SetOperationName("Export to MySQL - Creating Table...");
+            request.ProgressReporter?.SetIsIndeterminate(true);
 
             var stopWatch = new Stopwatch();
             stopWatch.Start();
@@ -70,6 +75,7 @@ namespace WDBXEditor2.Core.Operations
                 WriteTableDefinition(cancellationToken, request.Storage!, writer, request.TableName, (x) => $"`{x}`");
             }
 
+
             var connectionBuilder = new MySqlConnectionStringBuilder
             {
                 Database = request.DatabaseName,
@@ -78,6 +84,9 @@ namespace WDBXEditor2.Core.Operations
                 Server = request.DatabaseHost,
                 Port = request.DatabasePort
             };
+
+            if (cancellationToken.IsCancellationRequested)
+                return Task.CompletedTask;
 
             using (var connection = new MySqlConnection(connectionBuilder.GetConnectionString(true)))
             {
@@ -91,6 +100,8 @@ namespace WDBXEditor2.Core.Operations
                 }
                 if (request.ExportData)
                 {
+                    request.ProgressReporter?.SetOperationName("Export to MySql - Exporting data...");
+                    request.ProgressReporter?.SetIsIndeterminate(false);
                     WriteDataToMySQL(cancellationToken, request, connection, transaction);
                 }
                 if (cancellationToken.IsCancellationRequested)
@@ -205,7 +216,7 @@ namespace WDBXEditor2.Core.Operations
             var enumerator = rows.GetEnumerator();
 
             var commandTextWriter = new StringWriter();
-            
+
             while (enumerator.MoveNext())
             {
                 if (cancellationToken.IsCancellationRequested)
@@ -246,7 +257,7 @@ namespace WDBXEditor2.Core.Operations
                 var progress = (int)Math.Floor((float)processedCount / rows.Count * 100);
                 request.ProgressReporter?.ReportProgress(progress);
             }
-            
+
 
             commandTextWriter.WriteLine(";");
             commandTextWriter.WriteLine();

@@ -225,7 +225,7 @@ namespace WDBXEditor2
 
             if (saveFileDialog.ShowDialog() == true)
             {
-                RunOperationAsync("Exporting to CSV File...", new ExportToCsvOperation()
+                RunOperationAsync(new ExportToCsvOperation()
                 {
                     FileName = saveFileDialog.FileName,
                     Storage = OpenedDB2Storage,
@@ -248,7 +248,7 @@ namespace WDBXEditor2
             if (openFileDialog.ShowDialog() == true)
             {
                 var fileName = openFileDialog.FileNames[0];
-                RunOperationAsync("Importing CSV File...", new ImportFromCsvOperation()
+                RunOperationAsync(new ImportFromCsvOperation()
                 {
                     FileName = fileName,
                     Storage = OpenedDB2Storage
@@ -341,18 +341,16 @@ namespace WDBXEditor2
 
         public void ReloadDataView()
         {
-            RunOperationAsync("Loading dataview...", new ReloadDataViewOperation());
+            RunOperationAsync(new ReloadDataViewOperation());
         }
 
-        public void RunOperationAsync(string operationName, IRequest request, bool reload = false)
+        public void RunOperationAsync(IRequest request, bool reload = false)
         {
-            txtOperation.Text = operationName;
-
             if (request is ProgressReportingRequest reporter)
             {
                 reporter.ProgressReporter = _progressReporter;
             }
-            var thread = new Thread(() =>
+            Task.Run(() => 
             {
                 _mediator.Send(request).ContinueWith((_) =>
                 {
@@ -360,6 +358,7 @@ namespace WDBXEditor2
                     {
                         txtOperation.Text = "";
                         ProgressBar.Value = 0;
+                        ProgressBar.IsIndeterminate = false;
                         if (reload)
                         {
                             ReloadDataView();
@@ -367,9 +366,6 @@ namespace WDBXEditor2
                     });
                 });
             });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.IsBackground = true;
-            thread.Start();
         }
     }
 }

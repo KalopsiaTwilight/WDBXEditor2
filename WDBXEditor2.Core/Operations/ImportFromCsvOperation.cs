@@ -23,6 +23,8 @@ namespace WDBXEditor2.Core.Operations
             var totalRecords = File.ReadAllLines(request.FileName).Length - 1;
             var processed = 0f;
 
+            request.ProgressReporter?.SetOperationName("Import from CSV - Importing data...");
+
             using (var reader = new StreamReader(request.FileName))
             using (var csv = new CsvReader(reader, new CsvConfiguration(CultureInfo.InvariantCulture)
             {

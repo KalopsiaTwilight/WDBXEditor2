@@ -1,5 +1,6 @@
 ﻿using DBCD;
 using MediatR;
+using Org.BouncyCastle.Asn1.Ocsp;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -64,6 +65,7 @@ namespace WDBXEditor2.Operations
         /// </summary>
         private void PopulateDataView(IDBCDStorage storage, ref DataTable data, IProgressReporter? progressReporter)
         {
+            progressReporter?.SetOperationName("Preparing dataview...");
             var rowsProcessed = 0;
             foreach (var rowData in storage.Values)
             {

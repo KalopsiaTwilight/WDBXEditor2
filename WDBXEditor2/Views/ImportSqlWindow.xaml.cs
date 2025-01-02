@@ -130,7 +130,7 @@ namespace WDBXEditor2.Views
             }
 
             var dbcdStorage = _mainWindow.OpenedDB2Storage;
-            _mainWindow.RunOperationAsync("Importing from MySQL database", new ImportFromMysqlDatabaseOperation()
+            _mainWindow.RunOperationAsync(new ImportFromMysqlDatabaseOperation()
             {
                 Storage = _mainWindow.OpenedDB2Storage,
                 TableName = ddlTableName.Text,
