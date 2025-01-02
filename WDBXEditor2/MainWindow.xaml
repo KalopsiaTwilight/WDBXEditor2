@@ -6,10 +6,10 @@
         mc:Ignorable="d" Title="WDBXEditor2" Height="640" Width="960"
         MinWidth="960" MinHeight="640" Icon="/Assets/icon.ico">
     <Window.CommandBindings>
-        <CommandBinding Command="Open" Executed="Open_Click"/>
-        <CommandBinding Command="Save" Executed="Save_Click"/>
-        <CommandBinding Command="SaveAs" Executed="SaveAs_Click"/>
-        <CommandBinding Command="Close" Executed="Close_Click"/>
+        <CommandBinding Command="Open" Executed="Open_Click" CanExecute="CommandBinding_CanExecute"/>
+        <CommandBinding Command="Save" Executed="Save_Click" CanExecute="CommandBinding_CanExecute"/>
+        <CommandBinding Command="SaveAs" Executed="SaveAs_Click" CanExecute="CommandBinding_CanExecute"/>
+        <CommandBinding Command="Close" Executed="Close_Click" CanExecute="CommandBinding_CanExecute"/>
     </Window.CommandBindings>
     <Window.InputBindings>
         <KeyBinding Key="O" Modifiers="Ctrl" Command="Open"/>
@@ -23,7 +23,7 @@
             <RowDefinition />
             <RowDefinition Height="215" />
         </Grid.RowDefinitions>
-        <Menu IsMainMenu="True" Grid.Row="0" Grid.ColumnSpan="2">
+        <Menu x:Name="mainMenu" IsMainMenu="True" Grid.Row="0" Grid.ColumnSpan="2">
             <MenuItem Header="_File">
                 <MenuItem x:Name="Open" Header="Open..." Click="Open_Click" InputGestureText="Ctrl+O"/>
                 <Separator />

@@ -344,12 +344,33 @@ namespace WDBXEditor2
             RunOperationAsync(new ReloadDataViewOperation());
         }
 
+        public void BlockUI()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                mainMenu.IsEnabled = false;
+                DB2DataGrid.IsReadOnly = true;
+                OpenDBItems.IsEnabled = false;
+            });
+        }
+
+        public void UnblockUI()
+        {
+            Dispatcher.Invoke(() =>
+            {
+                mainMenu.IsEnabled = true;
+                DB2DataGrid.IsReadOnly = false;
+                OpenDBItems.IsEnabled = true;
+            });
+        }
+
         public void RunOperationAsync(IRequest request, bool reload = false)
         {
             if (request is ProgressReportingRequest reporter)
             {
                 reporter.ProgressReporter = _progressReporter;
             }
+            BlockUI();
             Task.Run(() => 
             {
                 _mediator.Send(request).ContinueWith((_) =>
@@ -363,9 +384,15 @@ namespace WDBXEditor2
                         {
                             ReloadDataView();
                         }
+                        UnblockUI();
                     });
                 });
             });
+        }
+
+        private void CommandBinding_CanExecute(object sender, System.Windows.Input.CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = mainMenu.IsEnabled;
         }
     }
 }
