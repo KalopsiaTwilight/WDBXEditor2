@@ -154,7 +154,7 @@ namespace WDBXEditor2.Core.Operations
                 {
                     writer.WriteLine(",");
                 }
-                writer.Write($"  {escapeFn(columns[i])} {GetSqlDataType(DBCDHelper.GetTypeForColumn(underlyingType, columns[i]))}");
+                writer.Write($"  {escapeFn(columns[i])} {GetSqlDataType(DBCDHelper.GetTypeForColumn(underlyingType, columns[i]))} NOT NULL");
             }
 
             var idField = DBCDHelper.GetIdFieldName(storage);
