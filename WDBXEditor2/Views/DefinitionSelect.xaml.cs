@@ -53,9 +53,6 @@ namespace WDBXEditor2.Views
                 int lastLocaleSelectedIndex = int.Parse(lastLocaleSelectedIndexSetting);
                 LocaleSelectList.SelectedIndex = lastLocaleSelectedIndex;
             }
-
-
-            Title = string.Format("Select Definition");
         }
 
         private void Load_Click(object sender, RoutedEventArgs e)

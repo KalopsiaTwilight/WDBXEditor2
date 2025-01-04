@@ -6,7 +6,7 @@
         xmlns:ctrl="clr-namespace:WDBXEditor2.Controls"
         xmlns:local="clr-namespace:WDBXEditor2.Views"
         mc:Ignorable="d"
-        Title="Set Column Value" Height="362" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
+        Title="Export to SQL" Height="362" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
     <StackPanel Margin="10,0,10,10">
         <TextBlock TextWrapping="WrapWithOverflow" Height="32" VerticalAlignment="Top">
             This function will allow you to export data from this table to a SQL File/Database

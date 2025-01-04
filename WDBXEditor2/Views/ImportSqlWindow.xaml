@@ -6,7 +6,7 @@
         xmlns:ctrl="clr-namespace:WDBXEditor2.Controls"
         xmlns:local="clr-namespace:WDBXEditor2.Views"
         mc:Ignorable="d"
-        Title="Set Column Value" Height="524" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
+        Title="Import from SQL" Height="524" Width="275" ResizeMode="NoResize" Icon="/Assets/icon.ico">
     <StackPanel Margin="10,0,10,10">
         <TextBlock TextWrapping="WrapWithOverflow" VerticalAlignment="Top">
             This function will allow you to import data from a SQL database. This requires that your column names match with the generated table definition.
