@@ -157,6 +157,13 @@ namespace WDBXEditor2.Core.Operations
                 writer.Write($"  {escapeFn(columns[i])} {GetSqlDataType(DBCDHelper.GetTypeForColumn(underlyingType, columns[i]))}");
             }
 
+            var idField = DBCDHelper.GetIdFieldName(storage);
+            if (idField != null)
+            {
+                writer.WriteLine(",");
+                writer.Write($"CONSTRAINT {escapeFn("PK_" + tableName)} PRIMARY KEY ({idField})");
+            }
+
             writer.WriteLine();
             writer.WriteLine(");");
             writer.WriteLine();
