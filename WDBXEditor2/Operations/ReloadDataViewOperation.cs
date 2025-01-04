@@ -1,12 +1,11 @@
 ﻿using DBCD;
 using MediatR;
-using Org.BouncyCastle.Asn1.Ocsp;
 using System;
-using System.Collections.Generic;
-using System.Data;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using WDBXEditor2.Core;
@@ -27,70 +26,68 @@ namespace WDBXEditor2.Operations
 
         public Task Handle(ReloadDataViewOperation request, CancellationToken cancellationToken)
         {
+            request.ProgressReporter?.SetOperationName("Preparing dataview...");
+            request.ProgressReporter?.SetIsIndeterminate(true);
+
             var stopWatch = new Stopwatch();
             stopWatch.Start();
 
-            var data = new DataTable();
-            PopulateColumns(_mainWindow.OpenedDB2Storage, ref data);
-            if (_mainWindow.OpenedDB2Storage.Values.Count > 0)
-                PopulateDataView(_mainWindow.OpenedDB2Storage, ref data, request.ProgressReporter);
+            var storage = _mainWindow.OpenedDB2Storage;
 
-            stopWatch.Stop();
-            Console.WriteLine($"Populating grid elapsed time: {stopWatch.Elapsed}");
-            data.RowDeleting += _mainWindow.Data_RowDeleted;
+            // Set type descriptor for dbcd types to current storage to provide type metadata to DataGrid
+            var typeDescProvider = new DBCDRowTypeDescriptionProvider(DBCDHelper.GetUnderlyingType(storage));
+
+            TypeDescriptor.RemoveProvider(TypeDescriptor.GetProvider(typeof(DBCDRow)), typeof(DBCDRow));
+            TypeDescriptor.AddProvider(typeDescProvider, typeof(DBCDRow));
+
+            TypeDescriptor.RemoveProvider(TypeDescriptor.GetProvider(typeof(DBCDRowProxy)), typeof(DBCDRowProxy));
+            TypeDescriptor.AddProvider(typeDescProvider, typeof(DBCDRowProxy));
+
+            // Create observable collection for datagrid view
+            var collection = new ObservableCollection<DBCDRowProxy>();  
+            foreach (var row in storage.Values)
+            {
+                collection.Add(new DBCDRowProxy(row));
+            }
+            collection.CollectionChanged += (s, e) =>
+            {
+                if (e.Action == NotifyCollectionChangedAction.Remove)
+                {
+                    foreach(var item in e.OldItems)
+                    {
+                        if (item is DBCDRowProxy proxy)
+                        {
+                            storage.Remove(proxy.RowData.ID);
+                        }
+                    }
+                }
+                if (e.Action == NotifyCollectionChangedAction.Add)
+                {
+                    foreach (var item in e.NewItems)
+                    {
+                        if (item is DBCDRowProxy proxy)
+                        {
+                            var id = storage.Keys.Count > 0 ? storage.Keys.Max() + 1 : 1;
+                            var rowData = storage.ConstructRow(id);
+                            rowData[DBCDHelper.GetIdFieldName(storage)] = id;
+                            rowData.ID = id;
+
+                            storage[id] = rowData;
+
+                            proxy.RowData = rowData;
+                        }
+                    }
+                }
+            };
 
             _mainWindow.Dispatcher.Invoke(() =>
             {
-                _mainWindow.DB2DataGrid.ItemsSource = data.DefaultView;
+                _mainWindow.DB2DataGrid.ItemsSource = collection;
             });
 
+            stopWatch.Stop();
+            Console.WriteLine($"Populating grid elapsed time: {stopWatch.Elapsed}");
             return Task.CompletedTask;
-        }
-
-
-        /// <summary>
-        /// Populate the DataView with the DB2 Columns.
-        /// </summary>
-        private void PopulateColumns(IDBCDStorage storage, ref DataTable data)
-        {
-            var columnNames = DBCDHelper.GetColumnNames(storage);
-            foreach (string columnName in columnNames)
-            {
-                data.Columns.Add(columnName);
-            }
-        }
-
-        /// <summary>
-        /// Populate the DataView with the DB2 Data.
-        /// </summary>
-        private void PopulateDataView(IDBCDStorage storage, ref DataTable data, IProgressReporter? progressReporter)
-        {
-            progressReporter?.SetOperationName("Preparing dataview...");
-            var rowsProcessed = 0;
-            foreach (var rowData in storage.Values)
-            {
-                var row = data.NewRow();
-
-                foreach (string columnName in rowData.GetDynamicMemberNames())
-                {
-                    var columnValue = rowData[columnName];
-
-                    if (columnValue.GetType().IsArray)
-                    {
-                        Array columnValueArray = (Array)columnValue;
-                        for (var i = 0; i < columnValueArray.Length; ++i)
-                            row[columnName + i] = columnValueArray.GetValue(i);
-                    }
-                    else
-                        row[columnName] = columnValue;
-                }
-
-                data.Rows.Add(row);
-                rowsProcessed++;
-
-                var progress = (int)((float)rowsProcessed / storage.Values.Count * 100f);
-                progressReporter?.ReportProgress(progress);
-            }
         }
     }
 }

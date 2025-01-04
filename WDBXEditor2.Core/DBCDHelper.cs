@@ -10,27 +10,29 @@ namespace WDBXEditor2.Core
         {
             return storage.GetType().GetGenericArguments()[0];
         }
- 
         public static string[] GetColumnNames(IDBCDStorage storage)
         {
-            var underlyingType = GetUnderlyingType(storage);
-            var fieldNames = storage.AvailableColumns;
+            return GetColumnNames(GetUnderlyingType(storage));
+        }
 
-            return fieldNames
-                .SelectMany(name =>
+        public static string[] GetColumnNames(Type underlyingType)
+        {
+            var fields = underlyingType.GetFields();
+
+            return fields
+                .SelectMany(field =>
                 {
-                    var field = underlyingType.GetField(name)!;
                     if (field.FieldType.IsArray)
                     {
                         var count = field.GetCustomAttribute<CardinalityAttribute>()!.Count;
                         var result = new string[count];
                         for (int i = 0; i < result.Length; i++)
                         {
-                            result[i] = name + i;
+                            result[i] = field.Name + i;
                         }
                         return result;
                     }
-                    return new[] { name };
+                    return [field.Name];
                 })
                 .ToArray();
         }
@@ -99,6 +101,19 @@ namespace WDBXEditor2.Core
                 n *= 10;
             }
             return fieldName;
+        }
+        public static string GetIdFieldName(IDBCDStorage storage)
+        {
+            var type = GetUnderlyingType(storage);
+            var fields = type.GetFields();
+            foreach (var field in fields)
+            {
+                if (field.GetCustomAttribute<IndexAttribute>() != null)
+                {
+                    return field.Name;
+                }
+            }
+            return string.Empty;
         }
 
         private static object ConvertArray<TConvert>(int size, string[] records)

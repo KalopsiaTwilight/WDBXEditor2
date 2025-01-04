@@ -52,8 +52,9 @@
             <DataGrid x:Name="DB2DataGrid" Margin="5,5,5,5" Background="#FF939393" CanUserResizeRows="False"
                       CanUserReorderColumns="False" CanUserSortColumns="False" AutoGenerateColumns="True"
                       VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                      ItemsSource="{Binding null, IsAsync=True}" EnableColumnVirtualization="True" EnableRowVirtualization="True"
-                      CellEditEnding="DB2DataGrid_CellEditEnding" InitializingNewItem="DB2DataGrid_InitializingNewItem"
+                      ItemsSource="{Binding null, IsAsync=True}" 
+                      EnableColumnVirtualization="True" EnableRowVirtualization="True"
+                      CanUserAddRows="True" CanUserDeleteRows="True"
                       />
         </Grid>
         <Grid Grid.Row="2" Grid.Column="0">
