@@ -22,8 +22,20 @@
             SelectionChanged="ddlImportType_SelectionChanged"
             >
             <ComboBoxItem Content="MySQL Database" IsSelected="True" />
+            <ComboBoxItem Content="SQLite Database" />
         </ComboBox>
-
+        
+        <StackPanel x:Name="pnlDBFile" Visibility="Collapsed" Margin="0,8,0,0">
+            <Label>Database File</Label>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="50" />
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="tbDatabaseFile" IsReadOnly="True" Height="20" />
+                <Button x:Name="btnSelectSQLiteDb" Height="20"  Grid.Column="2" Click="btnSelectSQLiteDb_Click">Select</Button>
+            </Grid>
+        </StackPanel>
         <StackPanel x:Name="pnlDbConnection" VerticalAlignment="Top" Visibility="Visible" Margin="0,8,0,0">
             <StackPanel.Resources>
                 <Style TargetType="{x:Type TextBox}">

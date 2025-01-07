@@ -28,10 +28,12 @@ namespace WDBXEditor2.Misc
             settings.Save();
         }
 
-        public string Get(string key)
+#nullable enable
+        public string? Get(string key)
         {
             return settings[key];
         }
+#nullable disable
 
         public void Remove(string key)
         {

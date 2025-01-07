@@ -1,8 +1,9 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.Win32;
 using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Reflection.Metadata;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,8 +13,15 @@ using WDBXEditor2.Misc;
 namespace WDBXEditor2.Views
 {
 
+    public enum SqlImportType
+    {
+        SQLite,
+        MySql
+    }
+
     public partial class ImportSqlWindow : Window
     {
+        private SqlImportType importType = SqlImportType.MySql;
         private string selectedImportType = "MySQL Database";
         private readonly MainWindow _mainWindow;
         private readonly ISettingsStorage _settings;
@@ -70,44 +78,73 @@ namespace WDBXEditor2.Views
             {
                 tbPassword.Password = lastDbPassword;
             }
+
+            string lastDbFile = _settings.Get(Constants.LastExportSqliteDbFileNameKey) ?? _settings.Get(Constants.LastImportSqliteDbFileNameKey);
+            if (lastDbFile != null)
+            {
+                tbDatabaseFile.Text = lastDbFile;
+                LoadSQLiteTables();
+            }
+
+            string lastTableName = string.Empty;
+            switch (importType)
+            {
+                case SqlImportType.MySql:
+                    {
+                        lastTableName = _settings.Get(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        lastTableName ??= _settings.Get(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        break;
+                    }
+                case SqlImportType.SQLite:
+                    {
+                        lastTableName = _settings.Get(Constants.LastImportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        lastTableName ??= _settings.Get(Constants.LastExportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        break;
+                    }
+
+            }
+            if (!string.IsNullOrEmpty(lastTableName))
+            {
+                ddlTableName.Text = lastTableName;
+            }
+            else
+            {
+                ddlTableName.Text = _mainWindow.CurrentOpenDB2.ToLower();
+            }
         }
 
 
         private void Ok_Click(object sender, RoutedEventArgs e)
         {
             var success = false;
-            switch (selectedImportType)
+            switch (importType)
             {
-                case "MySQL Database":
+                case SqlImportType.MySql:
                     {
                         success = ImportFromMySqlDatabase();
+                        break;
+                    }
+                case SqlImportType.SQLite:
+                    {
+                        success = ImportFromSqliteDatabase();
                         break;
                     }
             }
             if (success)
             {
-                _settings.Store(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2, ddlTableName.Text);
-                var storeDbPass = _settings.Get(Constants.StoreDbPasswords);
-                if (storeDbPass == null)
+                switch (importType)
                 {
-                    var savePassResult = MessageBox.Show(
-                        "Would you like to store the last used password for database connections for future exports and imports?\n\nNOTE: Passwords will be stored as plaintext, meaning they will be readable from this application's settings storage by others.",
-                        "Store database passwords?", MessageBoxButton.YesNo, MessageBoxImage.Information
-                    );
-                    if (savePassResult == MessageBoxResult.Yes)
-                    {
-                        _settings.Store(Constants.StoreDbPasswords, "true");
-                        storeDbPass = "true";
-                    }
-                    else
-                    {
-                        _settings.Store(Constants.StoreDbPasswords, "false");
-                        storeDbPass = "false";
-                    }
-                }
-                if (bool.Parse(storeDbPass))
-                {
-                    _settings.Store(Constants.LastImportMySqlDbPasswordKey, tbPassword.Password);
+                    case SqlImportType.SQLite:
+                        {
+                            _settings.Store(Constants.LastImportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2, ddlTableName.Text);
+                            break;
+                        }
+                    case SqlImportType.MySql:
+                        {
+                            _settings.Store(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2, ddlTableName.Text);
+                            SaveDbPassword();
+                            break;
+                        }
                 }
                 Close();
             }
@@ -121,7 +158,7 @@ namespace WDBXEditor2.Views
             if (string.IsNullOrEmpty(ddlTableName.Text))
             {
                 MessageBox.Show(
-                    "Export to Mysql requires a valid database connection and database selected.",
+                    "Import from Mysql requires a valid database connection and database selected.",
                     "WDBXEditor2",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning
@@ -143,6 +180,30 @@ namespace WDBXEditor2.Views
             return true;
         }
 
+        private bool ImportFromSqliteDatabase()
+        {
+            if (string.IsNullOrEmpty(ddlTableName.Text))
+            {
+                MessageBox.Show(
+                    "Import from SQLite requires a valid database file and table selected.",
+                    "WDBXEditor2",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+                return false;
+            }
+
+            var dbcdStorage = _mainWindow.OpenedDB2Storage;
+            _mainWindow.RunOperationAsync(new ImportFromSQliteDatabaseOperation()
+            {
+                Storage = _mainWindow.OpenedDB2Storage,
+                TableName = ddlTableName.Text,
+                FileName = tbDatabaseFile.Text,
+            }, true);
+            return true;
+
+        }
+
         private void ddlImportType_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             var newExportType = (e.AddedItems[0] as ComboBoxItem)?.Content?.ToString();
@@ -155,9 +216,20 @@ namespace WDBXEditor2.Views
                 {
                     case "MySQL Database":
                         {
+                            importType = SqlImportType.MySql;
                             Height = 524;
+                            pnlDBFile.Visibility = Visibility.Collapsed;
                             pnlDbConnection.Visibility = Visibility.Visible;
                             LoadDatabases();
+                            LoadTables(ddlDatabase.Text);
+                            break;
+                        }
+                    case "SQLite Database":
+                        {
+                            importType = SqlImportType.SQLite;
+                            Height = 332;
+                            pnlDBFile.Visibility = Visibility.Visible;
+                            pnlDbConnection.Visibility = Visibility.Collapsed;
                             LoadTables(ddlDatabase.Text);
                             break;
                         }
@@ -186,9 +258,27 @@ namespace WDBXEditor2.Views
 
         private void ddlDatabase_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var newDatabase = e.AddedItems[0] as string;
-            _settings.Store(Constants.LastImportMySqlDbNameKey, newDatabase);
-            LoadTables(newDatabase);
+            if (e.AddedItems.Count > 0)
+            {
+                var newDatabase = e.AddedItems[0] as string;
+                _settings.Store(Constants.LastImportMySqlDbNameKey, newDatabase);
+                LoadTables(newDatabase);
+            }
+        }
+        private void btnSelectSQLiteDb_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyComputer),
+                CheckFileExists = false
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                tbDatabaseFile.Text = openFileDialog.FileName;
+                _settings.Store(Constants.LastExportSqliteDbFileNameKey, openFileDialog.FileName);
+                LoadTables(ddlDatabase.Text);
+            }
         }
 
         private void DbPassword_Changed(object sender, RoutedEventArgs e)
@@ -206,9 +296,9 @@ namespace WDBXEditor2.Views
                 return;
             }
 
-            switch (selectedImportType)
+            switch (importType)
             {
-                case "MySQL Database":
+                case SqlImportType.MySql:
                     {
                         LoadMySqlDatabases();
                         break;
@@ -223,11 +313,16 @@ namespace WDBXEditor2.Views
             {
                 return;
             }
-            switch (selectedImportType)
+            switch (importType)
             {
-                case "MySQL Database":
+                case SqlImportType.MySql:
                     {
                         LoadMySqlTables(database);
+                        break;
+                    }
+                case SqlImportType.SQLite:
+                    {
+                        LoadSQLiteTables();
                         break;
                     }
             }
@@ -304,14 +399,14 @@ namespace WDBXEditor2.Views
                     sqlConnection.Close();
                     Dispatcher.Invoke(() =>
                     {
-                        foreach (var database in tables)
+                        foreach (var table in tables)
                         {
-                            ddlTableName.Items.Add(database);
+                            ddlTableName.Items.Add(table);
                         }
                         ddlTableName.IsEnabled = true;
                         var lastSelected = _settings.Get(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
                         lastSelected ??= _settings.Get(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
-                        if (lastSelected != null && ddlDatabase.Items.Contains(lastSelected))
+                        if (lastSelected != null && ddlTableName.Items.Contains(lastSelected))
                         {
                             ddlTableName.Text = lastSelected;
                             ddlTableName.SelectedItem = lastSelected;
@@ -336,6 +431,66 @@ namespace WDBXEditor2.Views
             });
         }
 
+        private void LoadSQLiteTables()
+        {
+            var connBuilder = new SqliteConnectionStringBuilder
+            {
+                DataSource = tbDatabaseFile.Text
+            };
+            Task.Run(() =>
+            {
+                try
+                {
+                    var tables = new List<string>();
+                    var sqlConnection = new SqliteConnection(connBuilder.ConnectionString);
+                    var command = sqlConnection.CreateCommand();
+                    command.CommandText = "SELECT name FROM sqlite_master WHERE type='table';";
+                    sqlConnection.Open();
+                    var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        tables.Add(reader.GetString(0));
+                    }
+                    sqlConnection.Close();
+                    Dispatcher.Invoke(() =>
+                    {
+                        foreach (var table in tables)
+                        {
+                            ddlTableName.Items.Add(table);
+                        }
+                        ddlTableName.IsEnabled = true;
+                        var lastSelected = _settings.Get(Constants.LastImportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        lastSelected ??= _settings.Get(Constants.LastExportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        if (lastSelected != null && ddlTableName.Items.Contains(lastSelected))
+                        {
+                            ddlTableName.Text = lastSelected;
+                            ddlTableName.SelectedItem = lastSelected;
+                        }
+                        else
+                        {
+                            ddlTableName.SelectedIndex = 0;
+                        }
+                    });
+                }
+                catch (SqliteException e)
+                {
+                    if (e.SqliteErrorCode == 26)
+                    {
+                        MessageBox.Show("Selected file was not a valid SQLite database file.");
+                        Dispatcher.Invoke(() =>
+                        {
+                            tbDatabaseFile.Text = string.Empty;
+                        });
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            });
+
+        }
+
         private string GetMysqlConnectionString(string database = null)
         {
             var connectionBuilder = new MySqlConnectionStringBuilder
@@ -349,5 +504,30 @@ namespace WDBXEditor2.Views
             return connectionBuilder.ConnectionString;
         }
 
+        private void SaveDbPassword()
+        {
+            var storeDbPass = _settings.Get(Constants.StoreDbPasswords);
+            if (storeDbPass == null)
+            {
+                var savePassResult = MessageBox.Show(
+                    "Would you like to store the last used password for database connections for future exports and imports?\n\nNOTE: Passwords will be stored as plaintext, meaning they will be readable from this application's settings storage by others.",
+                    "Store database passwords?", MessageBoxButton.YesNo, MessageBoxImage.Information
+                );
+                if (savePassResult == MessageBoxResult.Yes)
+                {
+                    _settings.Store(Constants.StoreDbPasswords, "true");
+                    storeDbPass = "true";
+                }
+                else
+                {
+                    _settings.Store(Constants.StoreDbPasswords, "false");
+                    storeDbPass = "false";
+                }
+            }
+            if (bool.Parse(storeDbPass))
+            {
+                _settings.Store(Constants.LastImportMySqlDbPasswordKey, tbPassword.Password);
+            }
+        }
     }
 }

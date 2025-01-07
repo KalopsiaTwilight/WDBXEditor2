@@ -1,4 +1,5 @@
-﻿using Microsoft.Win32;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.Win32;
 using MySql.Data.MySqlClient;
 using System;
 using System.Collections.Generic;
@@ -12,9 +13,16 @@ using WDBXEditor2.Misc;
 
 namespace WDBXEditor2.Views
 {
+    public enum SqlExportType
+    {
+        SQLite,
+        MySql,
+        File
+    }
 
     public partial class ExportSqlWindow : Window
     {
+        private SqlExportType exportType = SqlExportType.File;
         private string selectedExportType = "File";
         private readonly MainWindow _mainWindow;
         private readonly ISettingsStorage _settings;
@@ -40,7 +48,8 @@ namespace WDBXEditor2.Views
             if (lastDbHost != null)
             {
                 tbHostname.Text = lastDbHost;
-            } else
+            }
+            else
             {
                 tbHostname.Text = "localhost";
             }
@@ -49,7 +58,8 @@ namespace WDBXEditor2.Views
             if (lastDbPort != null)
             {
                 tbPort.Text = lastDbPort;
-            } else
+            }
+            else
             {
                 tbPort.Text = "3306";
             }
@@ -58,7 +68,8 @@ namespace WDBXEditor2.Views
             if (lastDbUsername != null)
             {
                 tbUsername.Text = lastDbUsername;
-            } else
+            }
+            else
             {
                 tbUsername.Text = "root";
             }
@@ -66,15 +77,38 @@ namespace WDBXEditor2.Views
             string lastDbPassword = _settings.Get(Constants.LastExportMySqlDbPasswordKey) ?? _settings.Get(Constants.LastImportMySqlDbPasswordKey);
             if (lastDbPassword != null)
             {
-                tbPassword.Password = lastDbPassword;                
+                tbPassword.Password = lastDbPassword;
             }
 
-            var lastTableName = _settings.Get(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
-            lastTableName ??= _settings.Get(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
-            if (lastTableName != null)
+            string lastDbFile = _settings.Get(Constants.LastExportSqliteDbFileNameKey) ?? _settings.Get(Constants.LastImportSqliteDbFileNameKey);
+            if (lastDbFile != null)
+            {
+                tbDatabaseFile.Text = lastDbFile;
+                LoadSQLiteTables();
+            }
+
+            string lastTableName = string.Empty;
+            switch (exportType)
+            {
+                case SqlExportType.MySql:
+                    {
+                        lastTableName = _settings.Get(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        lastTableName ??= _settings.Get(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        break;
+                    }
+                case SqlExportType.SQLite:
+                    {
+                        lastTableName = _settings.Get(Constants.LastExportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        lastTableName ??= _settings.Get(Constants.LastImportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        break;
+                    }
+
+            }
+            if (!string.IsNullOrEmpty(lastTableName))
             {
                 ddlTableName.Text = lastTableName;
-            } else
+            }
+            else
             {
                 ddlTableName.Text = _mainWindow.CurrentOpenDB2.ToLower();
             }
@@ -83,48 +117,30 @@ namespace WDBXEditor2.Views
         private void Ok_Click(object sender, RoutedEventArgs e)
         {
             var success = false;
-            switch (selectedExportType)
+            switch (exportType)
             {
-                case "File":
+                case SqlExportType.File:
                     {
                         success = SaveToSqlFile();
                         break;
                     }
-                case "MySQL Database":
+                case SqlExportType.MySql:
                     {
                         success = SaveToMysqlDatabase();
+                        break;
+                    }
+                case SqlExportType.SQLite:
+                    {
+                        success = SaveToSQLiteDatabase();
                         break;
                     }
             }
             if (success)
             {
-                _settings.Store(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2, ddlTableName.Text);
-
-                var storeDbPass = _settings.Get(Constants.StoreDbPasswords);
-                if (storeDbPass == null)
-                {
-                    var savePassResult = MessageBox.Show(
-                        "Would you like to store the last used password for database connections for future exports and imports?\n\nNOTE: Passwords will be stored as plaintext, meaning they will be readable from this application's settings storage by others.",
-                        "Store database passwords?", MessageBoxButton.YesNo, MessageBoxImage.Information
-                    );
-                    if (savePassResult == MessageBoxResult.Yes)
-                    {
-                        _settings.Store(Constants.StoreDbPasswords, "true");
-                        storeDbPass = "true";
-                    }
-                    else
-                    {
-                        _settings.Store(Constants.StoreDbPasswords, "false");
-                        storeDbPass = "false";
-                    }
-                }
-                if (bool.Parse(storeDbPass))
-                {
-                    _settings.Store(Constants.LastExportMySqlDbPasswordKey, tbPassword.Password);
-                }
                 Close();
             }
         }
+
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
             Close();
@@ -143,6 +159,7 @@ namespace WDBXEditor2.Views
             var isSuccess = saveFileDialog.ShowDialog() == true;
             if (isSuccess)
             {
+                _settings.Store(Constants.LastExportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2, ddlTableName.Text);
                 _mainWindow.RunOperationAsync(new ExportToSqlFileOperation()
                 {
                     CreateTable = cbCreateTable.IsChecked == true,
@@ -158,7 +175,7 @@ namespace WDBXEditor2.Views
         }
 
         private bool SaveToMysqlDatabase()
-        { 
+        {
             if (string.IsNullOrEmpty(ddlDatabase.Text))
             {
                 MessageBox.Show(
@@ -185,6 +202,36 @@ namespace WDBXEditor2.Views
                 DatabaseUser = tbUsername.Text,
                 DatabasePassword = tbPassword.Password
             });
+
+            _settings.Store(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2, ddlTableName.Text);
+            SaveDbPassword();
+            return true;
+        }
+
+        private bool SaveToSQLiteDatabase()
+        {
+            if (string.IsNullOrEmpty(tbDatabaseFile.Text))
+            {
+                MessageBox.Show(
+                    "Export to SQLite requires a database file being selected.",
+                    "WDBXEditor2",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+                return false;
+            }
+
+            var dbcdStorage = _mainWindow.OpenedDB2Storage;
+            _mainWindow.RunOperationAsync(new ExportToSQLiteDatabaseOperation()
+            {
+                CreateTable = cbCreateTable.IsChecked == true,
+                DropTable = cbDropTable.IsChecked == true,
+                ExportData = cbExportData.IsChecked == true,
+                Storage = _mainWindow.OpenedDB2Storage,
+                TableName = ddlTableName.Text,
+                InsertsPerStatement = uint.Parse(tbNrInserts.Text),
+                FileName = tbDatabaseFile.Text
+            });
             return true;
         }
 
@@ -200,15 +247,28 @@ namespace WDBXEditor2.Views
                 {
                     case "File":
                         {
-                            Height = 362;
+                            Height = 360;
+                            pnlDBFile.Visibility = Visibility.Collapsed;
                             pnlDbConnection.Visibility = Visibility.Collapsed;
+                            exportType = SqlExportType.File;
                             break;
                         }
                     case "MySQL Database":
                         {
-                            Height = 624;
+                            Height = 610;
+                            pnlDBFile.Visibility = Visibility.Collapsed;
                             pnlDbConnection.Visibility = Visibility.Visible;
+                            exportType = SqlExportType.MySql;
                             LoadDatabases();
+                            LoadTables(ddlDatabase.Text);
+                            break;
+                        }
+                    case "SQLite Database":
+                        {
+                            Height = 416;
+                            pnlDBFile.Visibility = Visibility.Visible;
+                            pnlDbConnection.Visibility = Visibility.Collapsed;
+                            exportType = SqlExportType.SQLite;
                             LoadTables(ddlDatabase.Text);
                             break;
                         }
@@ -241,24 +301,69 @@ namespace WDBXEditor2.Views
 
         private void ddlDatabase_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            var newDatabase = e.AddedItems[0] as string;
-            _settings.Store(Constants.LastExportMySqlDbNameKey, newDatabase);
-            LoadTables(newDatabase);
+            if (e.AddedItems.Count > 0)
+            {
+                var newDatabase = e.AddedItems[0] as string;
+                _settings.Store(Constants.LastExportMySqlDbNameKey, newDatabase);
+                LoadTables(newDatabase);
+            };
+        }
+
+        private void btnSelectSQLiteDb_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyComputer),
+                CheckFileExists = false
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                tbDatabaseFile.Text = openFileDialog.FileName;
+                _settings.Store(Constants.LastExportSqliteDbFileNameKey, openFileDialog.FileName);
+                LoadTables(ddlDatabase.Text);
+            }
+        }
+
+        private void SaveDbPassword()
+        {
+            var storeDbPass = _settings.Get(Constants.StoreDbPasswords);
+            if (storeDbPass == null)
+            {
+                var savePassResult = MessageBox.Show(
+                    "Would you like to store the last used password for database connections for future exports and imports?\n\nNOTE: Passwords will be stored as plaintext, meaning they will be readable from this application's settings storage by others.",
+                    "Store database passwords?", MessageBoxButton.YesNo, MessageBoxImage.Information
+                );
+                if (savePassResult == MessageBoxResult.Yes)
+                {
+                    _settings.Store(Constants.StoreDbPasswords, "true");
+                    storeDbPass = "true";
+                }
+                else
+                {
+                    _settings.Store(Constants.StoreDbPasswords, "false");
+                    storeDbPass = "false";
+                }
+            }
+            if (bool.Parse(storeDbPass))
+            {
+                _settings.Store(Constants.LastExportMySqlDbPasswordKey, tbPassword.Password);
+            }
         }
 
         private void LoadDatabases()
         {
             ddlDatabase.Items.Clear();
             ddlDatabase.IsEnabled = false;
-            
+
             if (string.IsNullOrEmpty(tbPassword.Password))
             {
                 return;
             }
 
-            switch (selectedExportType)
+            switch (exportType)
             {
-                case "MySQL Database":
+                case SqlExportType.MySql:
                     {
                         LoadMySqlDatabases();
                         break;
@@ -272,11 +377,16 @@ namespace WDBXEditor2.Views
             {
                 return;
             }
-            switch (selectedExportType)
+            switch (exportType)
             {
-                case "MySQL Database":
+                case SqlExportType.MySql:
                     {
                         LoadMySqlTables(database);
+                        break;
+                    }
+                case SqlExportType.SQLite:
+                    {
+                        LoadSQLiteTables();
                         break;
                     }
             }
@@ -312,7 +422,8 @@ namespace WDBXEditor2.Views
                         {
                             ddlDatabase.Text = lastSelected;
                             ddlDatabase.SelectedItem = lastSelected;
-                        } else
+                        }
+                        else
                         {
                             ddlDatabase.SelectedIndex = 0;
                         }
@@ -352,9 +463,9 @@ namespace WDBXEditor2.Views
                     sqlConnection.Close();
                     Dispatcher.Invoke(() =>
                     {
-                        foreach (var database in tables)
+                        foreach (var table in tables)
                         {
-                            ddlTableName.Items.Add(database);
+                            ddlTableName.Items.Add(table);
                         }
                         var lastSelected = _settings.Get(Constants.LastExportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
                         lastSelected ??= _settings.Get(Constants.LastImportMysqlDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
@@ -378,6 +489,59 @@ namespace WDBXEditor2.Views
             });
         }
 
+        private void LoadSQLiteTables()
+        {
+            var connBuilder = new SqliteConnectionStringBuilder
+            {
+                DataSource = tbDatabaseFile.Text
+            };
+            Task.Run(() =>
+            {
+                try
+                {
+                    var tables = new List<string>();
+                    var sqlConnection = new SqliteConnection(connBuilder.ConnectionString);
+                    var command = sqlConnection.CreateCommand();
+                    command.CommandText = "SELECT name FROM sqlite_master WHERE type='table';";
+                    sqlConnection.Open();
+                    var reader = command.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        tables.Add(reader.GetString(0));
+                    }
+                    sqlConnection.Close();
+                    Dispatcher.Invoke(() =>
+                    {
+                        foreach (var table in tables)
+                        {
+                            ddlTableName.Items.Add(table);
+                        }
+                        var lastSelected = _settings.Get(Constants.LastExportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        lastSelected ??= _settings.Get(Constants.LastImportSQliteDbTableKeyPrefix + _mainWindow.CurrentOpenDB2);
+                        if (lastSelected != null)
+                        {
+                            ddlTableName.Text = lastSelected;
+                        }
+                    });
+                }
+                catch (SqliteException e)
+                {
+                    if (e.SqliteErrorCode == 26)
+                    {
+                        MessageBox.Show("Selected file was not a valid SQLite database file.");
+                        Dispatcher.Invoke(() =>
+                        {
+                            tbDatabaseFile.Text = string.Empty;
+                        });
+                    } else
+                    {
+                        throw;
+                    }
+                }
+            });
+
+        }
+
         private string GetMysqlConnectionString(string database = null)
         {
             var connectionBuilder = new MySqlConnectionStringBuilder
@@ -390,5 +554,6 @@ namespace WDBXEditor2.Views
             };
             return connectionBuilder.ConnectionString;
         }
+
     }
 }

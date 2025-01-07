@@ -1,7 +1,9 @@
 ﻿using CsvHelper;
 using DBCD;
 using MediatR;
+using Microsoft.Data.Sqlite;
 using MySql.Data.MySqlClient;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Globalization;
 using System.Transactions;
@@ -33,7 +35,13 @@ namespace WDBXEditor2.Core.Operations
 
     }
 
-    public class ExportToSqlOperationsHandler : IRequestHandler<ExportToSqlFileOperation>, IRequestHandler<ExportToMysqlDatabaseOperation>
+    public class ExportToSQLiteDatabaseOperation: SQLExportOperationBase
+    {
+        public string FileName { get; set; } = string.Empty;
+    }
+
+    public class ExportToSqlOperationsHandler : IRequestHandler<ExportToSqlFileOperation>, IRequestHandler<ExportToMysqlDatabaseOperation>, 
+        IRequestHandler<ExportToSQLiteDatabaseOperation>
     {
         public Task Handle(ExportToSqlFileOperation request, CancellationToken cancellationToken)
         {
@@ -47,7 +55,7 @@ namespace WDBXEditor2.Core.Operations
             using (var fileStream = File.Create(request.FileName))
             using (var writer = new StreamWriter(fileStream))
             {
-                WriteSqlFile(cancellationToken, request, writer, (x) => $"\"{x}\"");
+                WriteSqlFile(cancellationToken, request, writer);
             }
             stopWatch.Stop();
             Console.WriteLine($"Exporting SQL File: {stopWatch.Elapsed}");
@@ -72,7 +80,7 @@ namespace WDBXEditor2.Core.Operations
             }
             if (request.CreateTable)
             {
-                WriteTableDefinition(cancellationToken, request.Storage!, writer, request.TableName, (x) => $"`{x}`");
+                WriteTableDefinition(cancellationToken, request.Storage!, writer, request.TableName, EscapeMySqlTable);
             }
 
 
@@ -102,7 +110,7 @@ namespace WDBXEditor2.Core.Operations
                 {
                     request.ProgressReporter?.SetOperationName("Export to MySql - Exporting data...");
                     request.ProgressReporter?.SetIsIndeterminate(false);
-                    WriteDataToMySQL(cancellationToken, request, connection, transaction);
+                    WriteDataToSQLConnection(cancellationToken, request, connection, transaction, EscapeMySqlTable, MySqlHelper.EscapeString);
                 }
                 if (cancellationToken.IsCancellationRequested)
                 {
@@ -119,30 +127,91 @@ namespace WDBXEditor2.Core.Operations
             return Task.CompletedTask;
         }
 
-
-        private void WriteSqlFile(CancellationToken cancellationToken, SQLExportOperationBase request, TextWriter writer, Func<string, string> escapeFn)
+        public Task Handle(ExportToSQLiteDatabaseOperation request, CancellationToken cancellationToken)
         {
+            var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for export operation.");
+
+            request.ProgressReporter?.SetOperationName("Export to SQLite - Creating Table...");
+            request.ProgressReporter?.SetIsIndeterminate(true);
+
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+
+            using var writer = new StringWriter();
             if (request.DropTable)
             {
-                writer.WriteLine($"DROP TABLE IF EXISTS {escapeFn(request.TableName)};");
+                writer.WriteLine($"DROP TABLE IF EXISTS {EscapeSqlTable(request.TableName)};");
                 writer.WriteLine();
             }
             if (request.CreateTable)
             {
-                WriteTableDefinition(cancellationToken, request.Storage!, writer, request.TableName, escapeFn);
+                WriteTableDefinition(cancellationToken, request.Storage!, writer, request.TableName, EscapeSqlTable);
+            }
+
+
+            var connectionBuilder = new SqliteConnectionStringBuilder
+            {
+                DataSource = request.FileName
+            };
+
+            if (cancellationToken.IsCancellationRequested)
+                return Task.CompletedTask;
+
+            using (var connection = new SqliteConnection(connectionBuilder.ConnectionString))
+            {
+                connection.Open();
+                var transaction = connection.BeginTransaction();
+                using (var command = connection.CreateCommand())
+                {
+                    command.Transaction = transaction;
+                    command.CommandText = writer.ToString();
+                    command.ExecuteNonQuery();
+                }
+                if (request.ExportData)
+                {
+                    request.ProgressReporter?.SetOperationName("Export to SQLite - Exporting data...");
+                    request.ProgressReporter?.SetIsIndeterminate(false);
+                    WriteDataToSQLConnection(cancellationToken, request, connection, transaction, EscapeSqlTable, EscapeSqlStringValue);
+                }
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    transaction.Rollback();
+                }
+                else
+                {
+                    transaction.Commit();
+                }
+                connection.Close();
+            }
+            stopWatch.Stop();
+
+            Console.WriteLine($"Exporting to MySQL: {stopWatch.Elapsed}");
+            return Task.CompletedTask;
+        }
+
+        private void WriteSqlFile(CancellationToken cancellationToken, SQLExportOperationBase request, TextWriter writer)
+        {
+            if (request.DropTable)
+            {
+                writer.WriteLine($"DROP TABLE IF EXISTS {EscapeSqlTable(request.TableName)};");
+                writer.WriteLine();
+            }
+            if (request.CreateTable)
+            {
+                WriteTableDefinition(cancellationToken, request.Storage!, writer, request.TableName, EscapeSqlTable);
             }
             if (request.ExportData)
             {
-                WriteDataToFile(cancellationToken, request, writer, escapeFn);
+                WriteDataToFile(cancellationToken, request, writer, EscapeSqlTable);
             }
         }
 
-        private void WriteTableDefinition(CancellationToken cancellationToken, IDBCDStorage storage, TextWriter writer, string tableName, Func<string, string> escapeFn)
+        private void WriteTableDefinition(CancellationToken cancellationToken, IDBCDStorage storage, TextWriter writer, string tableName, Func<string, string> tableEscapeFn)
         {
             var underlyingType = DBCDHelper.GetUnderlyingType(storage);
             var columns = DBCDHelper.GetColumnNames(storage);
 
-            writer.WriteLine($"CREATE TABLE {escapeFn(tableName)} (");
+            writer.WriteLine($"CREATE TABLE {tableEscapeFn(tableName)} (");
 
             for (var i = 0; i < columns.Length; i++)
             {
@@ -154,14 +223,14 @@ namespace WDBXEditor2.Core.Operations
                 {
                     writer.WriteLine(",");
                 }
-                writer.Write($"  {escapeFn(columns[i])} {GetSqlDataType(DBCDHelper.GetTypeForColumn(underlyingType, columns[i]))} NOT NULL");
+                writer.Write($"  {tableEscapeFn(columns[i])} {GetSqlDataType(DBCDHelper.GetTypeForColumn(underlyingType, columns[i]))} NOT NULL");
             }
 
             var idField = DBCDHelper.GetIdFieldName(storage);
             if (idField != null)
             {
                 writer.WriteLine(",");
-                writer.Write($"CONSTRAINT {escapeFn("PK_" + tableName)} PRIMARY KEY ({idField})");
+                writer.Write($"CONSTRAINT {tableEscapeFn("PK_" + tableName)} PRIMARY KEY ({idField})");
             }
 
             writer.WriteLine();
@@ -169,7 +238,7 @@ namespace WDBXEditor2.Core.Operations
             writer.WriteLine();
         }
 
-        private void WriteDataToFile(CancellationToken cancellationToken, SQLExportOperationBase request, TextWriter writer, Func<string, string> escapeFn)
+        private void WriteDataToFile(CancellationToken cancellationToken, SQLExportOperationBase request, TextWriter writer, Func<string, string> tableEscapeFn)
         {
             var storage = request.Storage!;
 
@@ -192,7 +261,7 @@ namespace WDBXEditor2.Core.Operations
                         writer.WriteLine(";");
                         writer.WriteLine();
                     }
-                    writer.WriteLine($"INSERT INTO {escapeFn(request.TableName)}");
+                    writer.WriteLine($"INSERT INTO {tableEscapeFn(request.TableName)}");
                     writer.WriteLine("VALUES");
                 }
                 else
@@ -201,7 +270,7 @@ namespace WDBXEditor2.Core.Operations
                 }
 
                 var rowData = string.Join(",", 
-                    colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x), (txtVal) => txtVal.Replace("'", "''")))
+                    colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x), EscapeSqlStringValue))
                 );
                 writer.Write($"  ({rowData})");
 
@@ -213,7 +282,8 @@ namespace WDBXEditor2.Core.Operations
             writer.WriteLine();
         }
 
-        private void WriteDataToMySQL(CancellationToken cancellationToken, SQLExportOperationBase request, MySqlConnection connection, MySqlTransaction transaction)
+        private void WriteDataToSQLConnection(CancellationToken cancellationToken, SQLExportOperationBase request, DbConnection connection, DbTransaction transaction, 
+            Func<string, string> tableEscapeFn, Func<string, string> stringEscapeFn)
         {
             var storage = request.Storage!;
 
@@ -246,7 +316,7 @@ namespace WDBXEditor2.Core.Operations
 
                         commandTextWriter.GetStringBuilder().Length = 0;
                     }
-                    commandTextWriter.WriteLine($"INSERT INTO `{request.TableName}`");
+                    commandTextWriter.WriteLine($"INSERT INTO {tableEscapeFn(request.TableName)} ");
                     commandTextWriter.WriteLine("VALUES");
                 }
                 else
@@ -255,7 +325,7 @@ namespace WDBXEditor2.Core.Operations
                 }
 
                 var rowData = string.Join(",",
-                    colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x), MySqlHelper.EscapeString))
+                    colNames.Select(x => GetSqlValue(DBCDHelper.GetDBCRowColumn(row, x), stringEscapeFn))
                 );
                 commandTextWriter.Write($"({rowData})");
 
@@ -274,7 +344,8 @@ namespace WDBXEditor2.Core.Operations
             finalCommand.ExecuteNonQuery();
         }
 
-        private string GetSqlValue(object val, Func<string, string> escapeStringFn)
+
+        private string GetSqlValue(object val, Func<string, string> stringEscapeFn)
         {
             if (val == null)
             {
@@ -282,7 +353,7 @@ namespace WDBXEditor2.Core.Operations
             }
             if (val is string txtVal)
             {
-                return  $"'{escapeStringFn(txtVal)}'";
+                return  $"'{stringEscapeFn(txtVal)}'";
             }
             if (val is float floatVal)
             {
@@ -308,6 +379,21 @@ namespace WDBXEditor2.Core.Operations
                 case nameof(String): return "TEXT";
             }
             throw new InvalidOperationException("Unknown datatype encounted in SQL conversion: " + t.Name);
+        }
+
+        private string EscapeMySqlTable(string table)
+        {
+            return "`" + table + "`";
+        }
+
+        private string EscapeSqlTable(string table)
+        {
+            return "\"" + table + "\"";
+        }
+
+        private string EscapeSqlStringValue(string value)
+        {
+            return value.Replace("'", "''");
         }
     }
 }
