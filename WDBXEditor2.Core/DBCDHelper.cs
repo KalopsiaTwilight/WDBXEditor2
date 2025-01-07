@@ -10,9 +10,35 @@ namespace WDBXEditor2.Core
         {
             return storage.GetType().GetGenericArguments()[0];
         }
+
         public static string[] GetColumnNames(IDBCDStorage storage)
         {
-            return GetColumnNames(GetUnderlyingType(storage));
+            var row = storage.Values.FirstOrDefault();
+            if (row == null)
+            {
+                return GetColumnNames(GetUnderlyingType(storage));
+            }
+            else
+            {
+                var fields = row.GetDynamicMemberNames();
+                return fields.SelectMany(fieldName =>
+                {
+                    if (row[fieldName].GetType().IsArray)
+                    {
+                        var cardinality = ((Array)row[fieldName]).Length;
+                        if (cardinality > 1)
+                        {
+                            var result = new string[cardinality];
+                            for (int i = 0; i < result.Length; i++)
+                            {
+                                result[i] = fieldName + i;
+                            }
+                            return result;
+                        }
+                    } 
+                    return [fieldName];
+                }).ToArray();
+            }
         }
 
         public static string[] GetColumnNames(Type underlyingType)

@@ -1,11 +1,14 @@
 ﻿using DBCD;
+using DBCD.IO.Attributes;
 using MediatR;
+using SQLitePCL;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using WDBXEditor2.Core;
@@ -35,7 +38,7 @@ namespace WDBXEditor2.Operations
             var storage = _mainWindow.OpenedDB2Storage;
 
             // Set type descriptor for dbcd types to current storage to provide type metadata to DataGrid
-            var typeDescProvider = new DBCDRowTypeDescriptionProvider(DBCDHelper.GetUnderlyingType(storage));
+            var typeDescProvider = new DBCDRowTypeDescriptionProvider(storage);
 
             TypeDescriptor.RemoveProvider(TypeDescriptor.GetProvider(typeof(DBCDRow)), typeof(DBCDRow));
             TypeDescriptor.AddProvider(typeDescProvider, typeof(DBCDRow));
@@ -71,6 +74,24 @@ namespace WDBXEditor2.Operations
                             var rowData = storage.ConstructRow(id);
                             rowData[DBCDHelper.GetIdFieldName(storage)] = id;
                             rowData.ID = id;
+
+                            // Resize arrays to their actual read size
+
+                            var firstRow = storage.Values.FirstOrDefault();
+                            if (firstRow != null)
+                            {
+                                var arrayFields = rowData.GetUnderlyingType().GetFields().Where(x => x.FieldType.IsArray);
+                                foreach (var arrayField in arrayFields)
+                                {
+                                    var count = ((Array)firstRow[arrayField.Name]).Length;
+                                    Array arrayData = Array.CreateInstance(arrayField.FieldType.GetElementType(), count);
+                                    for (var i = 0; i < count; i++)
+                                    {
+                                        arrayData.SetValue(Activator.CreateInstance(arrayField.FieldType.GetElementType()), i);
+                                    }
+                                    firstRow[arrayField.Name] = arrayData;
+                                }
+                            }
 
                             storage[id] = rowData;
 

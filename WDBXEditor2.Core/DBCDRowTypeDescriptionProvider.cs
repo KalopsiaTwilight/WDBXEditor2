@@ -17,15 +17,15 @@ namespace WDBXEditor2.Core
 
     public class DBCDRowTypeDescriptionProvider : TypeDescriptionProvider
     {
-        private readonly Type _rowUnderlyingType;
-        public DBCDRowTypeDescriptionProvider(Type rowUnderlyingType)
+        private readonly string[] columns;
+        public DBCDRowTypeDescriptionProvider(IDBCDStorage storage)
         {
-            _rowUnderlyingType = rowUnderlyingType;
+            columns = DBCDHelper.GetColumnNames(storage);
         }
 
         public override ICustomTypeDescriptor GetTypeDescriptor([DynamicallyAccessedMembers((DynamicallyAccessedMemberTypes)(-1))] Type objectType, object? instance)
         {
-            return new DBCDRowTypeDescriptor(DBCDHelper.GetColumnNames(_rowUnderlyingType));
+            return new DBCDRowTypeDescriptor(columns);
         }
     }
 
