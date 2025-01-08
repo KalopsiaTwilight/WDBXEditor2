@@ -1,20 +1,11 @@
 ﻿using DBCD;
 using DBCD.IO.Attributes;
-using Google.Protobuf.WellKnownTypes;
 using MediatR;
 using Microsoft.Data.Sqlite;
 using MySql.Data.MySqlClient;
-using Org.BouncyCastle.Asn1.Ocsp;
-using System;
-using System.Collections.Generic;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace WDBXEditor2.Core.Operations
 {
@@ -40,12 +31,18 @@ namespace WDBXEditor2.Core.Operations
 
     public class ImportFromSqlOperationsHandler : IRequestHandler<ImportFromMysqlDatabaseOperation>, IRequestHandler<ImportFromSQliteDatabaseOperation>
     {
+        private string[] _colNames = [];
+        private DBCDRow? _firstRow;
+
         public Task Handle(ImportFromMysqlDatabaseOperation request, CancellationToken cancellationToken)
         {
             var dbcdStorage = request.Storage ?? throw new InvalidOperationException("No DBCD Storage provided for import operation.");
 
             var stopWatch = new Stopwatch();
             stopWatch.Start();
+
+            _colNames = DBCDHelper.GetColumnNames(dbcdStorage);
+            _firstRow = dbcdStorage.Values.FirstOrDefault();
 
             dbcdStorage.Clear();
 
@@ -77,6 +74,9 @@ namespace WDBXEditor2.Core.Operations
             var stopWatch = new Stopwatch();
             stopWatch.Start();
 
+            _colNames = DBCDHelper.GetColumnNames(dbcdStorage);
+            _firstRow = dbcdStorage.Values.FirstOrDefault();
+
             dbcdStorage.Clear();
 
             var connectionBuilder = new SqliteConnectionStringBuilder()
@@ -101,14 +101,13 @@ namespace WDBXEditor2.Core.Operations
         {
             var dbcdStorage = request.Storage!;
 
-            var colNames = DBCDHelper.GetColumnNames(dbcdStorage);
             var underlyingType = DBCDHelper.GetUnderlyingType(dbcdStorage);
             var fields = underlyingType.GetFields();
 
             int idFieldIndex = 0;
-            for (var i = 0; i < colNames.Length; i++)
+            for (var i = 0; i < _colNames.Length; i++)
             {
-                var fieldName = DBCDHelper.GetUnderlyingFieldName(underlyingType, colNames[i], out var _);
+                var fieldName = DBCDHelper.GetUnderlyingFieldName(underlyingType, _colNames[i], out var _);
                 if (underlyingType.GetField(fieldName)!.GetCustomAttribute<IndexAttribute>() != null)
                 {
                     idFieldIndex = i;
@@ -126,7 +125,7 @@ namespace WDBXEditor2.Core.Operations
 
             request.ProgressReporter?.SetOperationName($"Import from {dbTypeName} - Importing data...");
             var readCommand = connection.CreateCommand();
-            readCommand.CommandText = $"SELECT {string.Join(", ", colNames.Select(escapeNameFn))} FROM {escapeNameFn(request.TableName)}";
+            readCommand.CommandText = $"SELECT {string.Join(", ", _colNames.Select(escapeNameFn))} FROM {escapeNameFn(request.TableName)}";
             var reader = readCommand.ExecuteReader();
             while (reader.Read())
             {
@@ -138,7 +137,6 @@ namespace WDBXEditor2.Core.Operations
 
                 var id = reader.GetInt32(idFieldIndex);
                 var row = dbcdStorage.ConstructRow(id);
-
                 foreach (var field in fields)
                 {
                     if (field.GetCustomAttribute<IndexAttribute>() != null)
@@ -150,6 +148,10 @@ namespace WDBXEditor2.Core.Operations
                     if (field.FieldType.IsArray)
                     {
                         var arrSize = field.GetCustomAttribute<CardinalityAttribute>()!.Count;
+                        if (_firstRow != null)
+                        {
+                            arrSize = ((Array)_firstRow[field.Name]!).Length;
+                        }
                         var arrayRecords = new string[arrSize];
 
                         for (var i = 0; i < arrSize; i++)

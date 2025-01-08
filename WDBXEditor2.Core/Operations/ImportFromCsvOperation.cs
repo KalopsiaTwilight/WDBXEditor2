@@ -43,6 +43,8 @@ namespace WDBXEditor2.Core.Operations
                     throw new InvalidOperationException("Unable to import CSV file without headers.");
                 }
 
+                var firstRow = dbcdStorage.Values.FirstOrDefault();
+
                 dbcdStorage.Clear();
                 while(await csv.ReadAsync())
                 {
@@ -60,9 +62,19 @@ namespace WDBXEditor2.Core.Operations
                         if (field.FieldType.IsArray)
                         {
                             var count = field.GetCustomAttribute<CardinalityAttribute>()!.Count;
+                            if (firstRow != null)
+                            {
+                                count = ((Array)firstRow[field.Name]!).Length;
+                            }
                             var rowRecords = new string[count];
-                            
-                            Array.Copy(csv.Parser.Record!, Array.IndexOf(csv.HeaderRecord, field.Name + 0), rowRecords, 0, count);
+
+                            var copyStart = Array.IndexOf(csv.HeaderRecord, field.Name + 0);
+                            if (copyStart == -1)
+                            {
+                                copyStart = Array.IndexOf(csv.HeaderRecord, field.Name);
+                            }
+
+                            Array.Copy(csv.Parser.Record!, copyStart, rowRecords, 0, count);
                             row[field.Name] = DBCDHelper.ConvertArray(field.FieldType, count, rowRecords);
                         }
                         else
