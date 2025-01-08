@@ -113,6 +113,11 @@ namespace WDBXEditor2
             {
                 Title = $"WDBXEditor2  -  {Constants.Version}  -  {CurrentOpenDB2}";
                 OpenedDB2Storage = storage;
+
+                tbCurrentDb2Stats.Text = $"{storage.Count} rows, {DBCDHelper.GetColumnNames(storage).Length} columns";
+                tbCurrentFile.Text = CurrentOpenDB2 + ".db2";
+                tbCurrentDefinition.Text = storage.LayoutHash.ToString("X8");
+
                 ReloadDataView();
             }
         }
@@ -133,6 +138,10 @@ namespace WDBXEditor2
 
             CurrentOpenDB2 = string.Empty;
             OpenedDB2Storage = null;
+
+            tbCurrentDb2Stats.Text = string.Empty;
+            tbCurrentFile.Text = string.Empty;
+            tbCurrentDefinition.Text = string.Empty;
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -311,6 +320,18 @@ namespace WDBXEditor2
         private void CommandBinding_CanExecute(object sender, System.Windows.Input.CanExecuteRoutedEventArgs e)
         {
             e.CanExecute = mainMenu.IsEnabled;
+        }
+        private void DB2DataGrid_CurrentCellChanged(object sender, EventArgs e)
+        {
+            var cell = (sender as DataGrid).CurrentCell;
+            if (!cell.IsValid)
+            {
+                return;
+            }
+            var columnName = cell.Column.Header.ToString();
+            var colInfo = DBCDHelper.GetColumnInfo(DBCDHelper.GetUnderlyingType(OpenedDB2Storage), columnName);
+
+            tbColumnInfo.Text = colInfo.ToString(); 
         }
     }
 }

@@ -18,7 +18,6 @@ namespace WDBXEditor2.Controller
     public class DBLoader
     {
         public ConcurrentDictionary<string, IDBCDStorage> LoadedDBFiles;
-        private Dictionary<string, (string BuildVersion, Locale Locale)> LoadedDBFileVersions;
 
         private readonly IDBDProvider _dbdProvider;
         private readonly IServiceProvider _serviceProvider;
@@ -28,7 +27,6 @@ namespace WDBXEditor2.Controller
             _serviceProvider = serviceProvider;
             _dbdProvider = serviceProvider.GetService<IDBDProvider>();
             LoadedDBFiles = new ConcurrentDictionary<string, IDBCDStorage>();
-            LoadedDBFileVersions = new();
         }
 
         public string[] LoadFiles(string[] files, string build, Locale locale)
@@ -51,12 +49,10 @@ namespace WDBXEditor2.Controller
                     {
                         loadedFiles.Add(db2Name);
                         LoadedDBFiles[db2Name] = storage;
-                        LoadedDBFileVersions[db2Name] = (build, locale);
                     }
                     else if (LoadedDBFiles.TryAdd(db2Name, storage))
                     {
                         loadedFiles.Add(db2Name);
-                        LoadedDBFileVersions.Add(db2Name, (build, locale));
                     }
 
                     stopWatch.Stop();
@@ -89,21 +85,6 @@ namespace WDBXEditor2.Controller
         public string GetDb2Name(string filePath)
         {
             return Path.GetFileNameWithoutExtension(filePath);
-        }
-
-        public void ReloadFile(string db2Path)
-        {
-            string db2Name = Path.GetFileNameWithoutExtension(db2Path);
-            if (!LoadedDBFiles.ContainsKey(db2Name))
-            {
-                throw new ArgumentException("Can not reload file that was not previously loaded. Provided filename: ", db2Path);
-            }
-            var versionInfo = LoadedDBFileVersions[db2Name];
-
-            var dbcd = new DBCD.DBCD(new FilesystemDBCProvider(Path.GetDirectoryName(db2Path)), _dbdProvider);
-            var storage = dbcd.Load(db2Name, versionInfo.BuildVersion, versionInfo.Locale);
-
-            LoadedDBFiles[db2Name] = storage;
         }
 
         public VersionDefinitions[] GetVersionDefinitionsForDB2(string db2File)
