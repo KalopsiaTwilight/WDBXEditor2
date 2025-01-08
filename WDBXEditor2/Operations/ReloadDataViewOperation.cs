@@ -89,7 +89,7 @@ namespace WDBXEditor2.Operations
                                     {
                                         arrayData.SetValue(Activator.CreateInstance(arrayField.FieldType.GetElementType()), i);
                                     }
-                                    firstRow[arrayField.Name] = arrayData;
+                                    rowData[arrayField.Name] = arrayData;
                                 }
                             }
 
