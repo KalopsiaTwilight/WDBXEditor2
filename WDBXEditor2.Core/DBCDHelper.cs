@@ -252,13 +252,17 @@ namespace WDBXEditor2.Core
                 columnInfo.ForeignColumnName = referenceAttribute.ForeignColumn;
             }
 
-            var bitSizeAttribute = fieldInfo.GetCustomAttribute<SizeInBitsAttribute>();
-            if (bitSizeAttribute != null)
+            if (columnInfo.DataType != "string")
             {
-                columnInfo.BitSize = bitSizeAttribute.Size;
-            } else
-            {
-                columnInfo.BitSize = GetBitSize(fieldInfo.FieldType);
+                var bitSizeAttribute = fieldInfo.GetCustomAttribute<SizeInBitsAttribute>();
+                if (bitSizeAttribute != null)
+                {
+                    columnInfo.BitSize = bitSizeAttribute.Size;
+                }
+                else
+                {
+                    columnInfo.BitSize = GetBitSize(fieldInfo.FieldType);
+                }
             }
             return columnInfo;
         }
