@@ -134,6 +134,10 @@ namespace WDBXEditor2.Core
             {
                 row[fieldName] = Convert.ChangeType(value, field.FieldType);
             }
+            if (field.GetCustomAttribute<IndexAttribute>() != null)
+            {
+                row.ID = Convert.ToInt32(value);
+            }
         }
 
         public static object GetDBCRowColumn(DBCDRow row, string colName)
