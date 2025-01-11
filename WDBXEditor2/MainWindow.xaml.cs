@@ -128,6 +128,7 @@ namespace WDBXEditor2
                 tbCurrentDb2Stats.Text = $"{storage.Count} rows, {DBCDHelper.GetColumnNames(storage).Length} columns";
                 tbCurrentFile.Text = CurrentOpenDB2 + ".db2";
                 tbCurrentDefinition.Text = storage.LayoutHash.ToString("X8");
+                tbColumnInfo.Text = string.Empty;
                 _copiedRowId = -1;
 
                 ReloadDataView();
@@ -155,6 +156,7 @@ namespace WDBXEditor2
             tbCurrentDb2Stats.Text = string.Empty;
             tbCurrentFile.Text = string.Empty;
             tbCurrentDefinition.Text = string.Empty;
+            tbColumnInfo.Text = string.Empty;
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
