@@ -1,16 +1,14 @@
 ﻿using DBCD;
-using DBCD.IO.Attributes;
 using MediatR;
-using SQLitePCL;
 using System;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Data;
 using WDBXEditor2.Core;
 
 namespace WDBXEditor2.Operations
@@ -52,63 +50,55 @@ namespace WDBXEditor2.Operations
             {
                 collection.Add(new DBCDRowProxy(row));
             }
-            collection.CollectionChanged += (s, e) =>
-            {
-                if (e.Action == NotifyCollectionChangedAction.Remove)
-                {
-                    foreach(var item in e.OldItems)
-                    {
-                        if (item is DBCDRowProxy proxy)
-                        {
-                            storage.Remove(proxy.RowData.ID);
-                        }
-                    }
-                }
-                if (e.Action == NotifyCollectionChangedAction.Add)
-                {
-                    foreach (var item in e.NewItems)
-                    {
-                        if (item is DBCDRowProxy proxy)
-                        {
-                            var id = storage.Keys.Count > 0 ? storage.Keys.Max() + 1 : 1;
-                            var rowData = storage.ConstructRow(id);
-                            rowData[DBCDHelper.GetIdFieldName(storage)] = id;
-                            rowData.ID = id;
+            collection.CollectionChanged += OnCollectionChanged;
+            _mainWindow.DataGridSource = collection;
 
-                            // Resize arrays to their actual read size
-
-                            var firstRow = storage.Values.FirstOrDefault();
-                            if (firstRow != null)
-                            {
-                                var arrayFields = rowData.GetUnderlyingType().GetFields().Where(x => x.FieldType.IsArray);
-                                foreach (var arrayField in arrayFields)
-                                {
-                                    var count = ((Array)firstRow[arrayField.Name]).Length;
-                                    Array arrayData = Array.CreateInstance(arrayField.FieldType.GetElementType(), count);
-                                    for (var i = 0; i < count; i++)
-                                    {
-                                        arrayData.SetValue(Activator.CreateInstance(arrayField.FieldType.GetElementType()), i);
-                                    }
-                                    rowData[arrayField.Name] = arrayData;
-                                }
-                            }
-
-                            storage[id] = rowData;
-
-                            proxy.RowData = rowData;
-                        }
-                    }
-                }
-            };
 
             _mainWindow.Dispatcher.Invoke(() =>
             {
-                _mainWindow.DB2DataGrid.ItemsSource = collection;
+                var viewSource = new CollectionViewSource
+                {
+                    Source = collection
+                };
+                //viewSource.Filter += ViewSource_Filter;
+                _mainWindow.DB2DataGrid.ItemsSource = viewSource.View;
             });
 
             stopWatch.Stop();
             Console.WriteLine($"Populating grid elapsed time: {stopWatch.Elapsed}");
             return Task.CompletedTask;
+        }
+
+        private void ViewSource_Filter(object sender, FilterEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            var storage = _mainWindow.OpenedDB2Storage;
+            if (e.Action == NotifyCollectionChangedAction.Remove)
+            {
+                foreach (var item in e.OldItems)
+                {
+                    if (item is DBCDRowProxy proxy)
+                    {
+                        storage.Remove(proxy.RowData.ID);
+                    }
+                }
+            }
+            if (e.Action == NotifyCollectionChangedAction.Add)
+            {
+                foreach (var item in e.NewItems)
+                {
+                    if (item is DBCDRowProxy proxy && proxy.RowData == null)
+                    {
+                        var rowData = DBCDHelper.ConstructNewRow(storage);
+                        storage[rowData.ID] = rowData;
+                        proxy.RowData = rowData;
+                    }
+                }
+            }
         }
     }
 }

@@ -14,6 +14,8 @@ using WDBXEditor2.Views;
 using WDBXEditor2.Core;
 using WDBXEditor2.Operations;
 using System.Threading.Tasks;
+using DBCD.IO;
+using System.Collections.ObjectModel;
 
 namespace WDBXEditor2
 {
@@ -26,11 +28,15 @@ namespace WDBXEditor2
         public string CurrentOpenDB2 { get; set; } = string.Empty;
 
         public Dictionary<string, string> OpenedDB2Paths { get; set; } = new Dictionary<string, string>();
+        public ObservableCollection<DBCDRowProxy> DataGridSource { get; set; } = new();
         public IDBCDStorage OpenedDB2Storage { get; set; }
 
         private readonly IServiceProvider _serviceProvider;
         private IMediator _mediator;
         private IProgressReporter _progressReporter;
+
+
+        private int _copiedRowId = -1;
 
         public MainWindow(IServiceProvider serviceProvider)
         {
@@ -117,6 +123,7 @@ namespace WDBXEditor2
                 tbCurrentDb2Stats.Text = $"{storage.Count} rows, {DBCDHelper.GetColumnNames(storage).Length} columns";
                 tbCurrentFile.Text = CurrentOpenDB2 + ".db2";
                 tbCurrentDefinition.Text = storage.LayoutHash.ToString("X8");
+                _copiedRowId = -1;
 
                 ReloadDataView();
             }
@@ -136,6 +143,7 @@ namespace WDBXEditor2
             DB2DataGrid.Columns.Clear();
             DB2DataGrid.ItemsSource = Array.Empty<int>();
 
+            _copiedRowId = -1;
             CurrentOpenDB2 = string.Empty;
             OpenedDB2Storage = null;
 
@@ -258,6 +266,44 @@ namespace WDBXEditor2
             OpenWindow<SetDependentColumnWindow>();
         }
 
+        private void Copy_Click(object sender, RoutedEventArgs e)
+        {
+            _copiedRowId = (DB2DataGrid.SelectedItem as DBCDRowProxy)?.RowData?.ID ?? -1;
+        }
+
+        private void Paste_Click(object sender, RoutedEventArgs e)
+        {
+            if (_copiedRowId == -1)
+            {
+                return;
+            }
+
+            if (!OpenedDB2Storage.ContainsKey(_copiedRowId))
+            {
+                _copiedRowId = -1;
+                return;
+            }
+
+            var rowToCopy = OpenedDB2Storage[_copiedRowId];
+            var newRow = DBCDHelper.ConstructNewRow(OpenedDB2Storage);
+
+            var columns = DBCDHelper.GetColumnNames(OpenedDB2Storage);
+            var idField = DBCDHelper.GetIdFieldName(OpenedDB2Storage);
+            foreach(var col in columns)
+            {
+                if (col != idField)
+                {
+                    var copyVal = DBCDHelper.GetDBCRowColumn(rowToCopy, col);
+                    DBCDHelper.SetDBCRowColumn(newRow, col, copyVal);
+                }
+            }
+            OpenedDB2Storage[newRow.ID] = newRow;
+            var proxy = new DBCDRowProxy(newRow);
+            DataGridSource.Add(proxy);
+            DB2DataGrid.ScrollIntoView(proxy);
+            DB2DataGrid.SelectedItem = proxy;
+        }
+
         public void ReloadDataView()
         {
             RunOperationAsync(new ReloadDataViewOperation());
@@ -332,6 +378,11 @@ namespace WDBXEditor2
             var colInfo = DBCDHelper.GetColumnInfo(DBCDHelper.GetUnderlyingType(OpenedDB2Storage), columnName);
 
             tbColumnInfo.Text = colInfo.ToString(); 
+        }
+
+        private void DB2DataGrid_CopyingRowClipboardContent(object sender, DataGridRowClipboardEventArgs e)
+        {
+            _copiedRowId = (DB2DataGrid.SelectedItem as DBCDRowProxy)?.RowData?.ID ?? -1;
         }
     }
 }

@@ -200,6 +200,33 @@ namespace WDBXEditor2.Core
             return string.Empty;
         }
 
+        public static DBCDRow ConstructNewRow(IDBCDStorage storage)
+        {
+            var id = storage.Keys.Count > 0 ? storage.Keys.Max() + 1 : 1;
+            var rowData = storage.ConstructRow(id);
+            rowData[GetIdFieldName(storage)] = id;
+            rowData.ID = id;
+
+            // Resize arrays to their actual read size
+            var firstRow = storage.Values.FirstOrDefault();
+            if (firstRow != null)
+            {
+                var arrayFields = rowData.GetUnderlyingType().GetFields().Where(x => x.FieldType.IsArray);
+                foreach (var arrayField in arrayFields)
+                {
+                    var count = ((Array)firstRow[arrayField.Name]).Length;
+                    Array arrayData = Array.CreateInstance(arrayField.FieldType.GetElementType()!, count);
+                    for (var i = 0; i < count; i++)
+                    {
+                        arrayData.SetValue(Activator.CreateInstance(arrayField.FieldType.GetElementType()!), i);
+                    }
+                    rowData[arrayField.Name] = arrayData;
+                }
+            }
+
+            return rowData;
+        }
+
         public static ColumnInfo GetColumnInfo(Type underlyingType, string columnName)
         {
             var fieldName = GetUnderlyingFieldName(underlyingType, columnName, out int _);
