@@ -16,6 +16,7 @@ using WDBXEditor2.Operations;
 using System.Threading.Tasks;
 using DBCD.IO;
 using System.Collections.ObjectModel;
+using WDBXEditor2.Misc;
 
 namespace WDBXEditor2
 {
@@ -29,6 +30,10 @@ namespace WDBXEditor2
 
         public Dictionary<string, string> OpenedDB2Paths { get; set; } = new Dictionary<string, string>();
         public ObservableCollection<DBCDRowProxy> DataGridSource { get; set; } = new();
+
+        public ColumnInfo SelectedColumnInfo { get; set; } = new();
+
+        public Filter Filter { get; set; } = new();
         public IDBCDStorage OpenedDB2Storage { get; set; }
 
         private readonly IServiceProvider _serviceProvider;
@@ -303,6 +308,16 @@ namespace WDBXEditor2
             DB2DataGrid.ScrollIntoView(proxy);
             DB2DataGrid.SelectedItem = proxy;
         }
+        private void Find_Click(object sender, RoutedEventArgs e)
+        {
+            OpenWindow<FindColumnWindow>();
+        }
+
+        private void ClearFilter_Click(object sender, RoutedEventArgs e)
+        {
+            Filter = new();
+            ReloadDataView();
+        }
 
         public void ReloadDataView()
         {
@@ -375,9 +390,8 @@ namespace WDBXEditor2
                 return;
             }
             var columnName = cell.Column.Header.ToString();
-            var colInfo = DBCDHelper.GetColumnInfo(DBCDHelper.GetUnderlyingType(OpenedDB2Storage), columnName);
-
-            tbColumnInfo.Text = colInfo.ToString(); 
+            SelectedColumnInfo = DBCDHelper.GetColumnInfo(DBCDHelper.GetUnderlyingType(OpenedDB2Storage), columnName);
+            tbColumnInfo.Text = SelectedColumnInfo.ToString(); 
         }
 
         private void DB2DataGrid_CopyingRowClipboardContent(object sender, DataGridRowClipboardEventArgs e)

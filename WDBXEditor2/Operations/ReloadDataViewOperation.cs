@@ -1,4 +1,5 @@
 ﻿using DBCD;
+using DBCD.IO;
 using MediatR;
 using System;
 using System.Collections.ObjectModel;
@@ -60,18 +61,52 @@ namespace WDBXEditor2.Operations
                 {
                     Source = collection
                 };
-                //viewSource.Filter += ViewSource_Filter;
+                viewSource.Filter += ViewSource_Filter;
                 _mainWindow.DB2DataGrid.ItemsSource = viewSource.View;
             });
+            UpdateDb2Stats();
 
             stopWatch.Stop();
             Console.WriteLine($"Populating grid elapsed time: {stopWatch.Elapsed}");
             return Task.CompletedTask;
         }
 
+        private void UpdateDb2Stats()
+        {
+            _mainWindow.Dispatcher.Invoke(() =>
+            {
+                var totalCount = _mainWindow.OpenedDB2Storage.Count;
+                var colCount = DBCDHelper.GetColumnNames(_mainWindow.OpenedDB2Storage).Length;
+                var isFiltered = _mainWindow.Filter.Type != Misc.FilterType.None;
+                var filteredCount = _mainWindow.OpenedDB2Storage.Values.Where(MatchesFilter).Count();
+
+                _mainWindow.tbCurrentDb2Stats.Text = $"{totalCount} rows{(isFiltered ? $" ({filteredCount} visible)" : "")}, {colCount} columns";
+            });
+        }
+
         private void ViewSource_Filter(object sender, FilterEventArgs e)
         {
-            throw new NotImplementedException();
+            if (e.Item is not DBCDRowProxy proxy)
+            {
+                return;
+            }
+            e.Accepted = MatchesFilter(proxy.RowData);
+        }
+
+        private bool MatchesFilter(DBCDRow row)
+        {
+            if (_mainWindow.Filter.Type == Misc.FilterType.None)
+            {
+                return true;
+            }
+            var colVal = DBCDHelper.GetDBCRowColumn(row, _mainWindow.Filter.Column).ToString();
+            switch (_mainWindow.Filter.Type)
+            {
+                case Misc.FilterType.Exact: return colVal.Equals(_mainWindow.Filter.Value);
+                case Misc.FilterType.Contains: return colVal.Contains(_mainWindow.Filter.Value);
+                case Misc.FilterType.RegEx: return _mainWindow.Filter.AsRegex.IsMatch(colVal);
+                default: return false;
+            }
         }
 
         private void OnCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -99,6 +134,7 @@ namespace WDBXEditor2.Operations
                     }
                 }
             }
+            UpdateDb2Stats();
         }
     }
 }

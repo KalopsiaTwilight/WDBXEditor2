@@ -12,6 +12,7 @@
         <CommandBinding Command="Close" Executed="Close_Click" CanExecute="CommandBinding_CanExecute"/>
         <CommandBinding Command="Copy" Executed="Copy_Click" CanExecute="CommandBinding_CanExecute" />
         <CommandBinding Command="Paste" Executed="Paste_Click" CanExecute="CommandBinding_CanExecute" />
+        <CommandBinding Command="Find" Executed="Find_Click" CanExecute="CommandBinding_CanExecute" />
     </Window.CommandBindings>
     <Window.InputBindings>
         <KeyBinding Key="O" Modifiers="Ctrl" Command="Open"/>
@@ -20,6 +21,7 @@
         <KeyBinding Key="W" Modifiers="Ctrl" Command="Close"/>
         <KeyBinding Key="C" Modifiers="Ctrl" Command="Copy" />
         <KeyBinding Key="V" Modifiers="Ctrl" Command="Paste" />
+        <KeyBinding Key="F" Modifiers="Ctrl" Command="Find" />
     </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
@@ -50,6 +52,8 @@
                 <Separator />
                 <MenuItem Header="_Copy" Click="Copy_Click" InputGestureText="Ctrl+C" />
                 <MenuItem Header="_Paste" Click="Paste_Click" InputGestureText="Ctrl+V" />
+                <Separator />
+                <MenuItem Header="_Find" Click="Find_Click" InputGestureText="Ctrl+F" />
             </MenuItem>
             <MenuItem Header="E_xport">
                 <MenuItem Header="To _Csv" Click="ExportCsv_Click" />
@@ -113,6 +117,7 @@
                     <TextBox x:Name="tbCurrentDb2Stats" Grid.Row="2" Grid.Column="1" IsReadOnly="True" />
                     <Label Grid.Row="3" Content="Column Info"/>
                     <TextBox x:Name="tbColumnInfo" Grid.Row="3" Grid.Column="1" IsReadOnly="True" />
+                    <Button x:Name="ClearFilter" Content="Clear Filter" Grid.Row="4" Grid.ColumnSpan="2" MaxWidth="100" MaxHeight="24" Click="ClearFilter_Click" />
                 </Grid>
             </GroupBox>
             <TextBlock x:Name="txtOperation" Grid.Row="1" Grid.ColumnSpan="2" Text="" />
