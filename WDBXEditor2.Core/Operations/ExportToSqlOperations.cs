@@ -338,10 +338,15 @@ namespace WDBXEditor2.Core.Operations
 
             commandTextWriter.WriteLine(";");
             commandTextWriter.WriteLine();
-            var finalCommand = connection.CreateCommand();
-            finalCommand.Transaction = transaction;
-            finalCommand.CommandText = commandTextWriter.ToString();
-            finalCommand.ExecuteNonQuery();
+
+            var finalCmdText = commandTextWriter.ToString();
+            if (finalCmdText.Length > 5)
+            {
+                var finalCommand = connection.CreateCommand();
+                finalCommand.Transaction = transaction;
+                finalCommand.CommandText = commandTextWriter.ToString();
+                finalCommand.ExecuteNonQuery();
+            }
         }
 
 
