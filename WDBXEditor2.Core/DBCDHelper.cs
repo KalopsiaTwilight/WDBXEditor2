@@ -181,6 +181,10 @@ namespace WDBXEditor2.Core
             while (int.TryParse(fieldName[^1].ToString(), out var indexN))
             {
                 fieldName = fieldName.Substring(0, fieldName.Length - 1);
+                if (type.GetField(fieldName) != null)
+                {
+                    return fieldName;
+                }
                 index += n * indexN;
                 n *= 10;
             }
