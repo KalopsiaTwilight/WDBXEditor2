@@ -53,7 +53,7 @@ namespace WDBXEditor2.Core.Operations
 
                     var record = csv.GetRecord(underlyingType);
 
-                    var id = (int)underlyingType.GetField(dbcdStorage.AvailableColumns.First())!.GetValue(record)!;
+                    var id = (int)underlyingType.GetField(DBCDHelper.GetIdFieldName(dbcdStorage))!.GetValue(record)!;
                     var row = dbcdStorage.ConstructRow(id);
 
                     var fields = underlyingType.GetFields();
