@@ -141,7 +141,7 @@ namespace WDBXEditor2.Core.Operations
                 {
                     if (field.GetCustomAttribute<IndexAttribute>() != null)
                     {
-                        row[field.Name] = id;
+                        row[field.Name] = Convert.ChangeType(id, field.FieldType);
                         currentCol++;
                         continue;
                     }
