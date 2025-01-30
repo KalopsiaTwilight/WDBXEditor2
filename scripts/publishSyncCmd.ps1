@@ -1,0 +1,1 @@
+dotnet publish .\WDBXEditor2.Tools.WDBX2Sync\WDBXEditor2.Tools.WDBX2Sync.csproj -r win-x64 --self-contained -c Debug /p:PublishSingleFile=true /p:IncludeNativeLibrariesForSelfExtract=true -o publish
