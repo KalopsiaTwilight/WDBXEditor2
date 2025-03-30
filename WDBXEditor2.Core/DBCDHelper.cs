@@ -180,13 +180,13 @@ namespace WDBXEditor2.Core
             var n = 1;
             while (int.TryParse(fieldName[^1].ToString(), out var indexN))
             {
+                index += n * indexN;
+                n *= 10;
                 fieldName = fieldName.Substring(0, fieldName.Length - 1);
                 if (type.GetField(fieldName) != null)
                 {
                     return fieldName;
                 }
-                index += n * indexN;
-                n *= 10;
             }
             return fieldName;
         }
