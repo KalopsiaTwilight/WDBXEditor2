@@ -27,6 +27,18 @@ namespace WDBXEditor2.Core.Operations
             request.ProgressReporter?.SetOperationName("Save DB2 - Writing data...");
             request.ProgressReporter?.SetIsIndeterminate(true);
 
+            // Fix changed ID fields
+            var rowsToReadd = dbcdStorage.ToDictionary().Where(pair => pair.Key != pair.Value.ID).ToList();
+            foreach(var row in rowsToReadd)
+            {
+                if (dbcdStorage.ContainsKey(row.Value.ID))
+                {
+                    throw new InvalidOperationException($"Unable to save DB2 file due to duplicated row ids. Row id: '{row.Value.ID}' exists one more or times.");
+                }
+                dbcdStorage.Remove(row.Key);
+                dbcdStorage.Add(row.Value.ID, row.Value);    
+            }
+
             var tempFile = Path.GetTempFileName();
             dbcdStorage.Save(tempFile);
 
