@@ -91,7 +91,7 @@ namespace WDBXEditor2
                     return;
                 }
 
-                definitionSelect.SetDefinitionFromVersionDefinitions(dbLoader.GetVersionDefinitionsForDB2(validDb2Name));
+                definitionSelect.SetDefinitionFromVersionDefinitions(dbLoader.GetVersionDefinitionsForDB2(dbLoader.GetDb2Name(validDb2Name)));
                 definitionSelect.ShowDialog();
 
                 if (definitionSelect.IsCanceled)
