@@ -8,6 +8,7 @@ using WDBXEditor2.Misc;
 using DBCD.Providers;
 using WDBXEditor2.Operations;
 using WDBXEditor2.Core;
+using WDBXEditor2.Controller;
 
 namespace WDBXEditor2
 {
@@ -39,7 +40,9 @@ namespace WDBXEditor2
             var settingsStorage = new SettingStorage();
             settingsStorage.Initialize();
             services.AddSingleton<ISettingsStorage>(settingsStorage);
+            services.AddHttpClient();
             services.AddTransient<IDBDProvider, GithubDBDProvider>();
+            services.AddTransient<IDBDNameProvider, GithubDBDNameProvider>();
             services.AddTransient<IProgressReporter, MainWindowProgressReporter>();
         }
 

@@ -98,7 +98,7 @@ namespace WDBXEditor2
                     {
                         foreach (string loadedDB in loadedDBs)
                         {
-                            OpenedDB2Paths[loadedDB] = files.First(x => Path.GetFileNameWithoutExtension(x) == loadedDB);
+                            OpenedDB2Paths[loadedDB] = files.First(x => Path.GetFileNameWithoutExtension(x).Equals(loadedDB, StringComparison.CurrentCultureIgnoreCase));
                             OpenDBItems.Items.Add(loadedDB);
                         }
 

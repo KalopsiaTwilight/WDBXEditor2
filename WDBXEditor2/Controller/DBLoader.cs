@@ -20,12 +20,14 @@ namespace WDBXEditor2.Controller
         public ConcurrentDictionary<string, IDBCDStorage> LoadedDBFiles;
 
         private readonly IDBDProvider _dbdProvider;
+        private readonly IDBDNameProvider _dbdNameProvider;
         private readonly IServiceProvider _serviceProvider;
 
         public DBLoader(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
             _dbdProvider = serviceProvider.GetService<IDBDProvider>();
+            _dbdNameProvider = serviceProvider.GetService<IDBDNameProvider>();
             LoadedDBFiles = new ConcurrentDictionary<string, IDBCDStorage>();
         }
 
@@ -84,7 +86,7 @@ namespace WDBXEditor2.Controller
 
         public string GetDb2Name(string filePath)
         {
-            return Path.GetFileNameWithoutExtension(filePath);
+            return _dbdNameProvider.GetTableNameForFile(Path.GetFileNameWithoutExtension(filePath));
         }
 
         public VersionDefinitions[] GetVersionDefinitionsForDB2(string db2File)
