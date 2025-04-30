@@ -40,6 +40,17 @@ namespace WDBXEditor2.Controller
             {
                 string db2Name = GetDb2Name(db2Path);
 
+                if (string.IsNullOrEmpty(db2Name))
+                {
+                    MessageBox.Show(
+                        string.Format("Cant find table definitions for {0}.\nFilename was not recognized as an existing DB2 table. Only files with recognizable table names can be opened at the moment.", db2Path),
+                        "WDBXEditor2",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning
+                    );
+                    continue;
+                }
+
                 try
                 {
                     var dbcd = new DBCD.DBCD(new FilesystemDBCProvider(Path.GetDirectoryName(db2Path)), _dbdProvider);
@@ -59,15 +70,6 @@ namespace WDBXEditor2.Controller
 
                     stopWatch.Stop();
                     Console.WriteLine($"Loading File: {db2Name} Elapsed Time: {stopWatch.Elapsed}");
-                }
-                catch (AggregateException)
-                {
-                    MessageBox.Show(
-                        string.Format("Cant find defenitions for {0}.\nCheck your Filename and note upper and lower case", db2Name),
-                        "WDBXEditor2",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning
-                    );
                 }
                 catch (Exception ex)
                 {

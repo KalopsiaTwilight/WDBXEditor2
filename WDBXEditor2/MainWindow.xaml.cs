@@ -77,7 +77,21 @@ namespace WDBXEditor2
                 var files = openFileDialog.FileNames;
 
                 DefinitionSelect definitionSelect = ActivatorUtilities.CreateInstance<DefinitionSelect>(_serviceProvider);
-                definitionSelect.SetDefinitionFromVersionDefinitions(dbLoader.GetVersionDefinitionsForDB2(dbLoader.GetDb2Name(files[0])));
+
+                var validDb2Name =  files.FirstOrDefault(x => !string.IsNullOrEmpty(dbLoader.GetDb2Name(x)));
+
+                if (string.IsNullOrEmpty(validDb2Name))
+                {
+                    MessageBox.Show(
+                        string.Format("Could not recognize selected file(s) as DB2 table names.\nOnly files with recognizable table names i.e. Achievement.db2 or ItemSparse.db2 can be opened at the moment."),
+                        "WDBXEditor2",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning
+                    );
+                    return;
+                }
+
+                definitionSelect.SetDefinitionFromVersionDefinitions(dbLoader.GetVersionDefinitionsForDB2(validDb2Name));
                 definitionSelect.ShowDialog();
 
                 if (definitionSelect.IsCanceled)
